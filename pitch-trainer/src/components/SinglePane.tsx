@@ -1,6 +1,6 @@
 import { SINGLE } from '../config'
 import { noteFull } from '../audio/notes'
-import { Button, Card } from './ui'
+import { Button, Card, InfoTip } from './ui'
 
 export type PresetKey = 'male' | 'female' | 'custom'
 
@@ -29,13 +29,10 @@ interface SinglePaneProps {
 export function SinglePane(p: SinglePaneProps) {
   const custom = p.preset === 'custom'
   return (
-    <Card title="単音発声トレーニング">
-      <div className="mb-2.5 flex flex-wrap items-center gap-2.5">
-        <label className="text-ink-dim text-[13px]" htmlFor="rangePreset">
-          出題範囲
-        </label>
+    <Card className="p-2.5">
+      <div className="flex flex-wrap items-center gap-2">
         <select
-          id="rangePreset"
+          aria-label="出題範囲"
           className="ctl"
           value={p.preset}
           onChange={(e) => p.onPresetChange(e.target.value as PresetKey)}
@@ -44,51 +41,55 @@ export function SinglePane(p: SinglePaneProps) {
           <option value="female">女性向け (G3〜G5)</option>
           <option value="custom">カスタム</option>
         </select>
-        <select
-          className="ctl"
-          aria-label="下限"
-          value={p.low}
-          disabled={!custom}
-          onChange={(e) => p.onLowChange(Number(e.target.value))}
-        >
-          {RANGE_OPTIONS.map((m) => (
-            <option key={m} value={m}>
-              {noteFull(m)}
-            </option>
-          ))}
-        </select>
-        <span className="text-ink-dim">〜</span>
-        <select
-          className="ctl"
-          aria-label="上限"
-          value={p.high}
-          disabled={!custom}
-          onChange={(e) => p.onHighChange(Number(e.target.value))}
-        >
-          {RANGE_OPTIONS.map((m) => (
-            <option key={m} value={m}>
-              {noteFull(m)}
-            </option>
-          ))}
-        </select>
+        <span className="flex items-center gap-1">
+          <select
+            className="ctl"
+            aria-label="下限"
+            value={p.low}
+            disabled={!custom}
+            onChange={(e) => p.onLowChange(Number(e.target.value))}
+          >
+            {RANGE_OPTIONS.map((m) => (
+              <option key={m} value={m}>
+                {noteFull(m)}
+              </option>
+            ))}
+          </select>
+          <span className="text-ink-dim">〜</span>
+          <select
+            className="ctl"
+            aria-label="上限"
+            value={p.high}
+            disabled={!custom}
+            onChange={(e) => p.onHighChange(Number(e.target.value))}
+          >
+            {RANGE_OPTIONS.map((m) => (
+              <option key={m} value={m}>
+                {noteFull(m)}
+              </option>
+            ))}
+          </select>
+        </span>
         <Button primary onClick={p.onQuiz} disabled={p.quizDisabled}>
           ▶ 出題
         </Button>
         <Button onClick={p.onReplay} disabled={p.replayDisabled}>
-          🔁 もう一度聞く
+          🔁 もう一度
         </Button>
         <Button onClick={p.onPass} disabled={p.passDisabled}>
           答えを見てパス
         </Button>
-        <span className="font-mono text-sm">
-          正解 <span>{p.score.ok}</span> / <span>{p.score.all}</span>
+        <span className="font-mono text-sm whitespace-nowrap">
+          正解 {p.score.ok} / {p.score.all}
+        </span>
+        <span className="ml-auto">
+          <InfoTip>
+            出題音を聞いて、同じ高さの声を出してください。発声中は高い/低いをリアルタイム表示します。±50セント以内を
+            <strong>約1.5秒キープで正解</strong>、外れた音程のまま安定すると<strong>不正解</strong>
+            が確定します。不正解後もそのまま発声を続けて、正しい音が出せるまで練習できます(スコアは不正解のまま)。
+          </InfoTip>
         </span>
       </div>
-      <p className="text-ink-dim mt-2 text-xs">
-        出題音を聞いて、同じ高さの声を出してください。発声中は高い/低いをリアルタイム表示します。±50セント以内を
-        <strong>約1.5秒キープで正解</strong>、外れた音程のまま安定すると<strong>不正解</strong>
-        が確定します。不正解後もそのまま発声を続けて、正しい音が出せるまで練習できます(スコアは不正解のまま)。
-      </p>
     </Card>
   )
 }

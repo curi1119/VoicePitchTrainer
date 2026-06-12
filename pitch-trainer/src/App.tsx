@@ -301,7 +301,7 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto max-w-[1080px] p-4">
+    <div className="mx-auto flex h-dvh max-w-[1080px] flex-col gap-2 overflow-y-auto p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:gap-3 md:p-4">
       {overlay && !sampledReady && (
         <div className="bg-bg fixed inset-0 z-50 flex flex-col items-center justify-center gap-4">
           <div className="text-lg font-semibold tracking-[0.08em]">
@@ -330,17 +330,16 @@ export default function App() {
           )}
         </div>
       )}
-      <header className="mb-3.5 flex flex-wrap items-center justify-between gap-2.5">
-        <h1 className="text-lg font-semibold tracking-[0.08em]">
+      <header className="flex items-center justify-between gap-2">
+        <h1 className="text-base font-semibold tracking-[0.08em] whitespace-nowrap">
           PITCH TRAINER
-          <span className="text-ink-dim ml-2 text-xs font-normal">発声音程トレーナー</span>
+          <span className="text-ink-dim ml-2 hidden text-xs font-normal sm:inline">
+            発声音程トレーナー
+          </span>
         </h1>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <label className="text-ink-dim text-[13px]" htmlFor="timbre">
-            音色
-          </label>
+        <div className="flex items-center gap-2">
           <select
-            id="timbre"
+            aria-label="音色"
             className="ctl"
             value={timbre}
             onChange={(e) => setTimbre(e.target.value as Timbre)}
@@ -350,26 +349,17 @@ export default function App() {
             <option value="beep">ビープ音</option>
           </select>
           <Button primary onClick={handleMic} disabled={micOn}>
-            {micOn ? '🎤 マイク動作中' : '🎤 マイクを開始'}
+            {micOn ? '🎤 動作中' : '🎤 マイク開始'}
           </Button>
         </div>
       </header>
 
-      <Card>
-        <PitchGraph
-          ref={graphRef}
-          className="h-[42dvh] min-h-[280px]"
-          onPlayNote={(m) => playTone(m, timbre)}
-        />
-        <JudgeBar ref={judgeRef} />
-      </Card>
-
-      <div className="mb-3.5 flex flex-wrap gap-1.5">
+      <div className="border-line bg-panel flex gap-1 rounded-lg border p-1">
         {TABS.map(([key, label]) => (
           <button
             key={key}
-            className={`border-line bg-panel cursor-pointer rounded-t-lg border px-4 py-2 text-sm ${
-              mode === key ? 'border-t-amber text-ink border-t-2' : 'text-ink-dim'
+            className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-sm ${
+              mode === key ? 'bg-panel2 text-amber font-semibold' : 'text-ink-dim'
             }`}
             onClick={() => switchMode(key)}
           >
@@ -378,10 +368,19 @@ export default function App() {
         ))}
       </div>
 
+      <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
+        <PitchGraph
+          ref={graphRef}
+          className="min-h-[180px] w-full flex-1"
+          onPlayNote={(m) => playTone(m, timbre)}
+        />
+        <JudgeBar ref={judgeRef} />
+      </div>
+
       {mode === 'tuner' && (
-        <Card title="チューナー(自由練習)">
-          <p className="text-ink-dim mt-2 text-xs">
-            マイクを開始して声を出すと、検出した音程がグラフに軌跡として表示されます。グラフ左の鍵盤や下の88鍵をクリックすると参照音が鳴ります。
+        <Card className="p-2.5">
+          <p className="text-ink-dim text-xs">
+            マイクを開始して声を出すと、検出した音程がグラフに軌跡として表示されます。グラフ左の鍵盤をタップすると参照音が鳴ります。
           </p>
         </Card>
       )}
@@ -420,13 +419,20 @@ export default function App() {
         />
       )}
 
-      <Card title="Keyboard — A0 ~ C8 (88 keys)">
-        <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} />
-      </Card>
-
-      <footer className="text-ink-dim mt-1.5 text-center text-[11px]">
-        Web Audio API / YIN ピッチ検出 / UI・音はコード生成(画像・音声アセット不使用)
-      </footer>
+      {/* 88鍵: スマホは折りたたみ、md 以上は常時表示 */}
+      <details className="md:hidden">
+        <summary className="border-line bg-panel text-ink-dim cursor-pointer rounded-lg border px-3 py-2 text-xs select-none">
+          🎹 88鍵キーボードを表示
+        </summary>
+        <div className="border-line bg-panel mt-1 rounded-lg border p-2">
+          <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} />
+        </div>
+      </details>
+      <div className="hidden md:block">
+        <Card title="Keyboard — A0 ~ C8 (88 keys)">
+          <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} />
+        </Card>
+      </div>
     </div>
   )
 }

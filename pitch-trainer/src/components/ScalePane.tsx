@@ -1,7 +1,7 @@
 import { SCALE } from '../config'
 import { noteFull } from '../audio/notes'
 import type { ChipState, PatternKey } from '../modes/scale'
-import { Button, Card } from './ui'
+import { Button, Card, InfoTip } from './ui'
 
 export interface Chip {
   label: string
@@ -39,13 +39,10 @@ interface ScalePaneProps {
 
 export function ScalePane(p: ScalePaneProps) {
   return (
-    <Card title="音階練習">
-      <div className="mb-2.5 flex flex-wrap items-center gap-2.5">
-        <label className="text-ink-dim text-[13px]" htmlFor="pattern">
-          パターン
-        </label>
+    <Card className="p-2.5">
+      <div className="flex flex-wrap items-center gap-2">
         <select
-          id="pattern"
+          aria-label="パターン"
           className="ctl"
           value={p.patternKey}
           onChange={(e) => p.onPatternChange(e.target.value as PatternKey)}
@@ -56,11 +53,8 @@ export function ScalePane(p: ScalePaneProps) {
             </option>
           ))}
         </select>
-        <label className="text-ink-dim text-[13px]" htmlFor="scaleBase">
-          開始音
-        </label>
         <select
-          id="scaleBase"
+          aria-label="開始音"
           className="ctl"
           value={p.base}
           onChange={(e) => p.onBaseChange(Number(e.target.value))}
@@ -71,29 +65,26 @@ export function ScalePane(p: ScalePaneProps) {
             </option>
           ))}
         </select>
-        <label className="text-ink-dim text-[13px]" htmlFor="bpm">
-          テンポ
-        </label>
-        <input
-          id="bpm"
-          type="range"
-          className="ctl"
-          min={SCALE.BPM_MIN}
-          max={SCALE.BPM_MAX}
-          step={SCALE.BPM_STEP}
-          value={p.bpm}
-          onChange={(e) => p.onBpmChange(Number(e.target.value))}
-        />
-        <span className="text-amber min-w-[70px] font-mono text-[13px]">{p.bpm} BPM</span>
-      </div>
-      <div className="mb-2.5 flex flex-wrap items-center gap-2.5">
+        <span className="flex items-center gap-1">
+          <input
+            aria-label="テンポ"
+            type="range"
+            className="ctl w-24"
+            min={SCALE.BPM_MIN}
+            max={SCALE.BPM_MAX}
+            step={SCALE.BPM_STEP}
+            value={p.bpm}
+            onChange={(e) => p.onBpmChange(Number(e.target.value))}
+          />
+          <span className="text-amber font-mono text-[13px]">{p.bpm}</span>
+        </span>
         <label className="text-ink-dim text-[13px]">
           <input
             type="checkbox"
             checked={p.guideOn}
             onChange={(e) => p.onGuideChange(e.target.checked)}
           />{' '}
-          ガイド音を鳴らす
+          ガイド音
         </label>
         <Button primary onClick={p.onStart} disabled={p.running}>
           ▶ スタート
@@ -101,24 +92,26 @@ export function ScalePane(p: ScalePaneProps) {
         <Button onClick={p.onStop} disabled={!p.running}>
           ■ 停止
         </Button>
-        <span className="font-mono text-sm">{p.info}</span>
+        <span className="ml-auto">
+          <InfoTip>
+            開始前に基音の和音、続いてガイド音が鳴るので、合わせて発声してください。1周ごとに半音ずつ上がっていきます。※ガイド音ON時はマイクがアプリの音を拾うため
+            <strong>ヘッドホン推奨</strong>です。
+          </InfoTip>
+        </span>
       </div>
+      <div className="text-ink-dim mt-1.5 min-h-[18px] font-mono text-xs">{p.info}</div>
       {p.chips.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-[5px]">
+        <div className="mt-1 flex gap-1 overflow-x-auto pb-0.5">
           {p.chips.map((c, i) => (
             <span
               key={i}
-              className={`rounded-md border px-2 py-1 font-mono text-xs ${CHIP_CLS[c.state]}`}
+              className={`shrink-0 rounded-md border px-1.5 py-0.5 font-mono text-xs ${CHIP_CLS[c.state]}`}
             >
               {c.label}
             </span>
           ))}
         </div>
       )}
-      <p className="text-ink-dim mt-2 text-xs">
-        1周ごとに半音ずつ上がっていきます。※ガイド音ON時はマイクがアプリの音を拾うため
-        <strong>ヘッドホン推奨</strong>です。
-      </p>
     </Card>
   )
 }
