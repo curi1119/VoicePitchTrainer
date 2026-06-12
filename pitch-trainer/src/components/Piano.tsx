@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PIANO } from '../config'
 import { isBlackKey, noteName, noteOct } from '../audio/notes'
 
@@ -38,9 +38,14 @@ interface PianoProps {
   onPlay(midi: number): void
 }
 
+/** タップ後に押下表示を残す時間 ms(素早いタップでも「押した感」が見えるように) */
+const PRESS_MS = 180
+
 export function Piano({ sung, target, onPlay }: PianoProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const keyEls = useRef(new Map<number, HTMLDivElement>())
+  const [pressed, setPressed] = useState<ReadonlySet<number>>(() => new Set())
+  const timersRef = useRef(new Set<ReturnType<typeof setTimeout>>())
 
   // 初期表示は中央(C4付近)へスクロール
   useEffect(() => {
@@ -56,18 +61,46 @@ export function Piano({ sung, target, onPlay }: PianoProps) {
       ?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
   }, [target])
 
+  // アンマウント時に押下表示のタイマーを掃除
+  useEffect(() => {
+    const timers = timersRef.current
+    return () => timers.forEach(clearTimeout)
+  }, [])
+
+  function press(midi: number) {
+    onPlay(midi)
+    setPressed((s) => new Set(s).add(midi))
+    const timer = setTimeout(() => {
+      timersRef.current.delete(timer)
+      setPressed((s) => {
+        const next = new Set(s)
+        next.delete(midi)
+        return next
+      })
+    }, PRESS_MS)
+    timersRef.current.add(timer)
+  }
+
   return (
     <div ref={scrollRef} className="overflow-x-auto pb-1.5">
       <div className="relative h-[120px] select-none" style={{ width: TOTAL_W }}>
         {KEYS.map((k) => {
           const isSung = sung === k.midi
+          const isPressed = pressed.has(k.midi)
+          const bg = k.black
+            ? isPressed
+              ? 'bg-[#46566c]'
+              : isSung
+                ? 'bg-blue'
+                : 'bg-[#222a33] hover:bg-[#3a4654]'
+            : isPressed
+              ? 'bg-[#cfc9b8]'
+              : isSung
+                ? 'bg-blue'
+                : 'bg-[#f2f0ea] hover:bg-white'
           const cls = k.black
-            ? `absolute top-0 z-[2] h-[74px] w-[15px] cursor-pointer rounded-b-[3px] border border-black ${
-                isSung ? 'bg-blue' : 'bg-[#222a33] hover:bg-[#3a4654]'
-              }`
-            : `absolute top-0 h-[120px] w-[25px] cursor-pointer rounded-b border border-[#2c3742] ${
-                isSung ? 'bg-blue' : 'bg-[#f2f0ea] hover:bg-white'
-              }`
+            ? `absolute top-0 z-[2] h-[74px] w-[15px] cursor-pointer rounded-b-[3px] border border-black transition-[background-color,transform] duration-100 ${bg}`
+            : `absolute top-0 h-[120px] w-[25px] cursor-pointer rounded-b border border-[#2c3742] transition-[background-color,transform] duration-100 ${bg}`
           return (
             <div
               key={k.midi}
@@ -78,11 +111,13 @@ export function Piano({ sung, target, onPlay }: PianoProps) {
               className={cls}
               style={{
                 left: k.left,
+                WebkitTapHighlightColor: 'transparent',
+                ...(isPressed ? { transform: 'translateY(2px) scaleY(0.98)' } : {}),
                 ...(target === k.midi
                   ? { outline: '3px solid var(--color-amber)', outlineOffset: '-3px' }
                   : {}),
               }}
-              onPointerDown={() => onPlay(k.midi)}
+              onPointerDown={() => press(k.midi)}
             >
               {k.label != null && (
                 <span className="pointer-events-none absolute bottom-[3px] w-full text-center font-mono text-[8px] text-[#6a737d]">

@@ -53,7 +53,11 @@ const COLORS = {
   levelBg: '#243140',
   levelLow: '#54667a',
   levelOk: '#56d9a0',
+  pressed: 'rgba(255,179,71,0.55)',
 } as const
+
+/** ミニ鍵盤タップ後に押下表示を残す時間 ms */
+const PRESS_MS = 180
 
 export function PitchGraph({
   onPlayNote,
@@ -68,6 +72,7 @@ export function PitchGraph({
   const pointsRef = useRef<Point[]>([])
   const rangeRef = useRef<GraphRange>({ low: GRAPH.INIT_LOW, high: GRAPH.INIT_HIGH })
   const textRef = useRef({ at: 0, note: '—', oct: '', freq: '---.-', cents: '± --' })
+  const pressedRef = useRef<{ midi: number; until: number } | null>(null)
 
   useImperativeHandle(
     ref,
@@ -213,6 +218,12 @@ export function PitchGraph({
             c.fillStyle = COLORS.sung
             c.fillRect(0, top, kw, bottom - top)
           }
+          // タップ直後の押下フラッシュ
+          const pressed = pressedRef.current
+          if (pressed && pressed.midi === m && pressed.until > f.now) {
+            c.fillStyle = COLORS.pressed
+            c.fillRect(0, top, kw, bottom - top)
+          }
           if (f.target != null && Math.round(f.target) === m) {
             c.strokeStyle = COLORS.target
             c.lineWidth = 2
@@ -272,7 +283,10 @@ export function PitchGraph({
         const y = e.clientY - rect.top
         if (x > GRAPH.KEYBOARD_W) return
         const midi = Math.round(midiOfY(y, rangeRef.current, rect.height))
-        if (midi >= PIANO.MIDI_MIN && midi <= PIANO.MIDI_MAX) onPlayNote(midi)
+        if (midi >= PIANO.MIDI_MIN && midi <= PIANO.MIDI_MAX) {
+          pressedRef.current = { midi, until: performance.now() + PRESS_MS }
+          onPlayNote(midi)
+        }
       }}
     />
   )
