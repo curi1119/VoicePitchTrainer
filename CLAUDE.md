@@ -17,7 +17,7 @@
 
 ## 技術スタック(2026-06 確定)
 
-React 19 + TypeScript (strict) + Vite / Tailwind CSS v4 / ESLint + Prettier (+ prettier-plugin-tailwindcss) / Vitest / Bun(パッケージ管理・スクリプト実行)+ Node 24 LTS(Vite・Vitest の実行系)
+React 19 + TypeScript (strict) + Vite / Tailwind CSS v4 / ESLint + Prettier (+ prettier-plugin-tailwindcss) / Vitest / Bun(パッケージ管理・スクリプト実行)+ Node 26(Vite・Vitest の実行系。2026-10 に LTS 昇格予定)
 
 Node と Bun は asdf で導入し、ルートの `.tool-versions` でバージョン固定。手元と CI(setup-node / setup-bun)が同じファイルを参照する。
 

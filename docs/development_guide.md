@@ -14,7 +14,7 @@
   ```
 
   リポジトリ外では別の Node を使える(このマシンは `asdf set --home nodejs system` 設定済みで、リポジトリ外は OS / brew の node)
-- 動作確認済み: Node v24.16.0 / Bun 1.3.14
+- 動作確認済み: Node v26.3.0 / Bun 1.3.14
 - GitHub CLI(`gh`)があると Actions の確認やリポジトリ操作が楽
 - 動作検証ブラウザ: PC は Windows 側の Firefox / Chrome、スマホは実機(GitHub Pages 経由)
 

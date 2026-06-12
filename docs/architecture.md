@@ -26,7 +26,7 @@
 |---|---|---|
 | UI | React 19 + TypeScript (strict) | Vite `react-ts` テンプレートベース |
 | ビルド | Vite | CI では `--base=/VoicePitchTrainer/` 付き |
-| ランタイム | Bun(パッケージ管理・スクリプト実行)+ Node 24 LTS(Vite・Vitest の実行系)。asdf + ルート `.tool-versions` で両方固定 | テストは `bun run test`(`bun test` は別物) |
+| ランタイム | Bun(パッケージ管理・スクリプト実行)+ Node 26(Vite・Vitest の実行系)。asdf + ルート `.tool-versions` で両方固定 | テストは `bun run test`(`bun test` は別物) |
 | CSS | Tailwind CSS v4(`@tailwindcss/vite`) | プロトタイプの配色(--bg, --panel, --amber 等)は `@theme` のデザイントークンとして移植 |
 | Lint/Format | ESLint + Prettier + prettier-plugin-tailwindcss | テンプレート付属の ESLint 設定を継承 |
 | テスト | Vitest(node 環境) | `audio/` と `modes/` が対象 |
