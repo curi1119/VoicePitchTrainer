@@ -32,6 +32,7 @@
 | テスト | Vitest(node 環境) | `audio/` と `modes/` が対象 |
 | 状態管理 | ライブラリなし | 下記「React との接続」参照 |
 | ピッチ検出 | YIN 法の自前実装 | 外部音声ライブラリ不使用(経緯: 自己相関法では男性低音で倍音誤検出 → YIN へ。HANDOVER.md §4.2) |
+| ピアノ音源 | smplr + SplendidGrandPiano(サンプル音源) | Steinway 系・パブリックドメイン。公式 CDN から遅延ロードし、未ロード中は合成ピアノにフォールバック。効果音・ビープは合成のまま |
 | デプロイ | GitHub Actions → GitHub Pages | `.github/workflows/deploy.yml` |
 
 ## リポジトリ構成
@@ -53,6 +54,7 @@ pitch-trainer/
 │  │  ├─ pitch-detector.ts   # YIN 実装(CMNDF + 放物線補間)
 │  │  ├─ smoothing.ts        # メディアン + EMA + ジャンプ棄却 + ヒステリシス + 発声ゲート
 │  │  ├─ synth.ts            # ビープ/簡易ピアノ合成、トライアド、成功/不正解音
+│  │  ├─ sampled-piano.ts    # サンプルピアノ (smplr + SplendidGrandPiano) のロードと再生
 │  │  ├─ mic.ts              # getUserMedia + ローパス + AnalyserNode
 │  │  └─ notes.ts            # MIDI ↔ 周波数 ↔ 音名 の変換ユーティリティ
 │  ├─ modes/        # 判定ロジック。純粋 TS(テスト対象)
@@ -105,6 +107,8 @@ pitch-trainer/
 | 音階ガイド音長 | `max(0.5, 拍×0.95)` 秒 | 短いとピチカート化する不具合対策 |
 | トライアド | 2拍再生 + 半拍空け | ラウンド開始前に調を提示 |
 | 出題プリセット | 男性 G2〜G4 / 女性 G3〜G5 | MIDI 43-67 / 55-79(カスタム初期値 C3〜C5) |
+| `SAMPLED_VOLUME` | 100 | サンプルピアノの音量 0-127(耳で再調整する前提の初期値) |
+| `SAMPLED_VELOCITY` | 90 | サンプルピアノのベロシティ 0-127(音色の明るさにも影響) |
 
 調整の経緯(なぜこの値か)は HANDOVER.md §5。**値を変えたらこの表と経緯を更新する。**
 
@@ -117,7 +121,7 @@ pitch-trainer/
 
 ## 既知の制限・将来課題
 
-- **本物のピアノ音源の導入を予定(優先度高)**: 現状の合成ピアノは音質に不満あり(減衰が速く、3秒出題でも体感 2.5 秒程度で小さくなる)。移植完了後に差し替える。候補: smplr(npm のサウンドフォント再生ライブラリ)+ ライセンスの明確な音源(smplr 同梱の SplendidGrandPiano、Salamander Grand Piano = CC BY 3.0 など)。アセットはライセンス的に問題ないもののみ利用可
+- ピアノ音源はサンプル化済み(2026-06-12、smplr + SplendidGrandPiano)。サンプルは公式 CDN(smpldsnds)から取得しているため、**オフライン/Capacitor 対応時は smplr の `baseUrl` オプションで同梱サンプルへ切り替える**。音質に不満が出たら Salamander Grand Piano(CC BY 3.0・要クレジット表記)への乗り換えが次候補。アセットはライセンス的に問題ないもののみ利用可
 - 音階練習でガイド音 ON + スピーカー使用時は自分のマイクがアプリ音を拾いうる(ヘッドホン推奨で運用)
 - AudioWorklet 化(検出処理のオーディオスレッド移行)は見送り中。現状メインスレッドで約 2.3ms/フレームと実用十分
 - 未着手の将来項目: 音名表記の切替(ドレミ等)、設定/スコアの localStorage 永続化、練習/テストモード切替、Capacitor によるモバイルアプリ化

@@ -12,6 +12,7 @@ import {
   playTriad,
   type Timbre,
 } from './audio/synth'
+import { loadSampledPiano } from './audio/sampled-piano'
 import { SingleMode } from './modes/single'
 import { ScaleMode, type PatternKey } from './modes/scale'
 import { Meter, type MeterHandle } from './components/Meter'
@@ -32,7 +33,8 @@ const TABS: ReadonlyArray<readonly [Mode, string]> = [
 export default function App() {
   // ---- 離散イベント系の state(再レンダリング対象)----
   const [micOn, setMicOn] = useState(false)
-  const [timbre, setTimbre] = useState<Timbre>('piano')
+  const [timbre, setTimbre] = useState<Timbre>('sampled')
+  const [sampledReady, setSampledReady] = useState(false)
   const [mode, setMode] = useState<Mode>('tuner')
   /** 検出音(鍵盤の青ハイライト)。音名ヒステリシス通過後なので更新頻度は低い */
   const [sung, setSung] = useState<number | null>(null)
@@ -70,6 +72,18 @@ export default function App() {
   useEffect(() => {
     latest.current = { timbre, patternKey, bpm, guideOn }
   })
+
+  // 最初のユーザー操作でサンプルピアノのロードを開始する(AudioContext は操作起点が必要)
+  useEffect(() => {
+    const kick = () => {
+      document.removeEventListener('pointerdown', kick)
+      loadSampledPiano(audioContext())
+        .then(() => setSampledReady(true))
+        .catch((e) => console.warn('サンプルピアノのロードに失敗(合成ピアノで継続):', e))
+    }
+    document.addEventListener('pointerdown', kick)
+    return () => document.removeEventListener('pointerdown', kick)
+  }, [])
 
   // インスタンスはマウント時に1度だけ生成する(コールバックはすべてイベント/タイマー文脈で呼ばれる)
   const scaleRef = useRef<ScaleMode | null>(null)
@@ -265,6 +279,7 @@ export default function App() {
             value={timbre}
             onChange={(e) => setTimbre(e.target.value as Timbre)}
           >
+            <option value="sampled">{sampledReady ? 'ピアノ' : 'ピアノ(準備中…)'}</option>
             <option value="piano">ピアノ(合成)</option>
             <option value="beep">ビープ音</option>
           </select>

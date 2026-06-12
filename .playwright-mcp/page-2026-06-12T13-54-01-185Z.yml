@@ -1,0 +1,49 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "PITCH TRAINER発声音程トレーナー" [level=1] [ref=e5]
+    - generic [ref=e6]:
+      - generic [ref=e7]: 音色
+      - combobox "音色" [ref=e8]:
+        - option "ピアノ" [selected]
+        - option "ピアノ(合成)"
+        - option "ビープ音"
+      - button "🎤 マイクを開始" [ref=e9] [cursor=pointer]
+  - generic [ref=e10]:
+    - heading "Pitch Meter" [level=2] [ref=e11]
+    - generic [ref=e12]:
+      - img [ref=e14]:
+        - generic [ref=e28]: "-50"
+        - generic [ref=e29]: "0"
+        - generic [ref=e30]: "+50"
+        - generic [ref=e33]: cents
+      - generic [ref=e34]:
+        - generic [ref=e35]: —
+        - generic [ref=e36]: "---.- Hz"
+        - generic [ref=e37]: ± -- cents
+  - generic [ref=e41]:
+    - button "チューナー" [ref=e42] [cursor=pointer]
+    - button "単音発声" [ref=e43] [cursor=pointer]
+    - button "音階練習" [ref=e44] [cursor=pointer]
+  - generic [ref=e45]:
+    - heading "チューナー(自由練習)" [level=2] [ref=e46]
+    - paragraph [ref=e47]: マイクを開始して声を出すと、検出した音程がメーターと鍵盤に表示されます。鍵盤をクリックすると参照音が鳴ります。
+  - generic [ref=e48]:
+    - heading "Keyboard — A0 ~ C8 (88 keys)" [level=2] [ref=e49]
+    - generic [ref=e51]:
+      - generic [ref=e55] [cursor=pointer]:
+        - generic: C1
+      - generic [ref=e67] [cursor=pointer]:
+        - generic: C2
+      - generic [ref=e79] [cursor=pointer]:
+        - generic: C3
+      - generic [ref=e91] [cursor=pointer]:
+        - generic: C4
+      - generic [ref=e103] [cursor=pointer]:
+        - generic: C5
+      - generic [ref=e115] [cursor=pointer]:
+        - generic: C6
+      - generic [ref=e127] [cursor=pointer]:
+        - generic: C7
+      - generic [ref=e139] [cursor=pointer]:
+        - generic: C8
+  - contentinfo [ref=e140]: Web Audio API / YIN ピッチ検出 / UI・音はコード生成(画像・音声アセット不使用)

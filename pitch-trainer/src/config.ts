@@ -142,4 +142,8 @@ export const SYNTH = {
   BEEP_GAIN: 0.25,
   /** 参照音(鍵盤クリック等)のデフォルト長 秒 */
   DEFAULT_DUR: 0.9,
+  /** サンプルピアノ (smplr SplendidGrandPiano) の音量 0-127。耳で再調整する前提の初期値 */
+  SAMPLED_VOLUME: 100,
+  /** サンプルピアノのベロシティ 0-127(音の強さ=音色の明るさにも影響) */
+  SAMPLED_VELOCITY: 90,
 } as const
