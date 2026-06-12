@@ -1,0 +1,67 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pitch-trainer/**"
+      - "prototype/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Pages へのデプロイは同時に1つだけ。進行中のデプロイは中断しない
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # pitch-trainer/(React版)があればビルド、まだ無ければ準備中ページを置く
+      - name: Build app
+        run: |
+          mkdir -p _site
+          if [ -f pitch-trainer/package.json ]; then
+            cd pitch-trainer
+            npm ci
+            npm run build -- --base="/${GITHUB_REPOSITORY#*/}/"
+            cd ..
+            cp -r pitch-trainer/dist/. _site/
+          else
+            echo '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pitch Trainer</title></head><body style="font-family:sans-serif;padding:2rem"><h1>Pitch Trainer</h1><p>React版は準備中です。<a href="prototype/">プロトタイプ版はこちら</a></p></body></html>' > _site/index.html
+          fi
+
+      # プロトタイプも /prototype/ で公開(スマホ実機検証用。getUserMedia は HTTPS 必須のため)
+      - name: Add prototype
+        run: |
+          mkdir -p _site/prototype
+          cp prototype/pitch-trainer-prototype.html _site/prototype/index.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

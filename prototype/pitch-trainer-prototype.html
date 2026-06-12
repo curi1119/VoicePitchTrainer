@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitch Trainer — 発声音程トレーナー (Prototype)</title>
+<style>
+  :root{
+    --bg:#151c23;
+    --panel:#1e2832;
+    --panel-2:#243140;
+    --line:#33424f;
+    --ink:#e9eef3;
+    --ink-dim:#8fa1b0;
+    --amber:#ffb347;
+    --green:#56d9a0;
+    --red:#ff6b6b;
+    --blue:#6bb8ff;
+    --mono:"Cascadia Code","Consolas",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI","Hiragino Sans","Yu Gothic UI",sans-serif;}
+  body{padding:16px;max-width:1080px;margin:0 auto;}
+
+  header{display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  h1{font-size:18px;letter-spacing:.08em;font-weight:600;}
+  h1 .sub{color:var(--ink-dim);font-size:12px;font-weight:400;margin-left:8px;}
+
+  .btn{background:var(--panel-2);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer;}
+  .btn:hover{border-color:var(--amber);}
+  .btn:disabled{opacity:.4;cursor:default;}
+  .btn.primary{background:var(--amber);color:#1a1410;border-color:var(--amber);font-weight:600;}
+  .btn.small{padding:5px 10px;font-size:12px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:14px;margin-bottom:14px;}
+  .card h2{font-size:12px;letter-spacing:.15em;color:var(--ink-dim);
+    font-weight:600;margin-bottom:10px;text-transform:uppercase;}
+
+  /* ===== メーター ===== */
+  .meter-wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:center;}
+  .gauge{flex:0 0 320px;}
+  .readout{flex:1;min-width:220px;text-align:center;}
+  .note-big{font-family:var(--mono);font-size:72px;line-height:1;font-weight:700;}
+  .note-big .oct{font-size:34px;color:var(--ink-dim);}
+  .freq{font-family:var(--mono);font-size:16px;color:var(--ink-dim);margin-top:6px;}
+  .cents-label{font-family:var(--mono);font-size:14px;margin-top:4px;}
+  .judge-msg{margin-top:10px;font-size:15px;min-height:22px;}
+  .judge-msg.ok{color:var(--green);font-weight:700;}
+  .judge-msg.ng{color:var(--red);}
+
+  canvas#wave{display:block;width:100%;height:54px;background:var(--panel-2);
+    border-radius:8px;margin-top:12px;}
+
+  /* ===== タブ ===== */
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .tab{background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);
+    border-radius:8px 8px 0 0;padding:8px 16px;font-size:14px;cursor:pointer;}
+  .tab.active{color:var(--ink);border-bottom-color:var(--panel);
+    background:var(--panel);border-top:2px solid var(--amber);}
+
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+  label{font-size:13px;color:var(--ink-dim);}
+  select,input[type=range]{background:var(--panel-2);color:var(--ink);
+    border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:13px;}
+  .val{font-family:var(--mono);font-size:13px;color:var(--amber);min-width:70px;}
+
+  .score{font-family:var(--mono);font-size:14px;}
+  .hold-bar{height:8px;background:var(--panel-2);border-radius:4px;overflow:hidden;
+    margin-top:8px;max-width:320px;margin-left:auto;margin-right:auto;}
+  .hold-bar i{display:block;height:100%;width:0;background:var(--green);transition:width .08s linear;}
+
+  .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+  .chip{font-family:var(--mono);font-size:12px;padding:4px 8px;border-radius:6px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink-dim);}
+  .chip.now{border-color:var(--amber);color:var(--amber);}
+  .chip.pass{background:rgba(86,217,160,.15);border-color:var(--green);color:var(--green);}
+  .chip.fail{background:rgba(255,107,107,.12);border-color:var(--red);color:var(--red);}
+
+  .hint{font-size:12px;color:var(--ink-dim);margin-top:8px;}
+
+  /* ===== ピアノ ===== */
+  .piano-scroll{overflow-x:auto;padding-bottom:6px;}
+  .piano{position:relative;height:120px;width:max-content;user-select:none;}
+  .wk{position:absolute;top:0;width:25px;height:120px;background:#f2f0ea;
+    border:1px solid #2c3742;border-radius:0 0 4px 4px;cursor:pointer;}
+  .wk:hover{background:#fff;}
+  .bk{position:absolute;top:0;width:15px;height:74px;background:#222a33;
+    border:1px solid #000;border-radius:0 0 3px 3px;cursor:pointer;z-index:2;}
+  .bk:hover{background:#3a4654;}
+  .key.sung{background:var(--blue) !important;}
+  .key.target{outline:3px solid var(--amber);outline-offset:-3px;}
+  .klabel{position:absolute;bottom:3px;width:100%;text-align:center;
+    font-family:var(--mono);font-size:8px;color:#6a737d;pointer-events:none;}
+
+  footer{color:var(--ink-dim);font-size:11px;text-align:center;margin-top:6px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PITCH TRAINER<span class="sub">発声音程トレーナー / Prototype v0.1</span></h1>
+  <div class="row" style="margin:0">
+    <label>音色</label>
+    <select id="timbre">
+      <option value="piano">ピアノ(合成)</option>
+      <option value="beep">ビープ音</option>
+    </select>
+    <button class="btn primary" id="micBtn">🎤 マイクを開始</button>
+  </div>
+</header>
+
+<!-- ===== メーター ===== -->
+<div class="card">
+  <h2>Pitch Meter</h2>
+  <div class="meter-wrap">
+    <div class="gauge">
+      <svg viewBox="0 0 300 170" width="100%">
+        <!-- 目盛り -->
+        <g id="ticks" stroke="#54667a" stroke-width="2"></g>
+        <!-- 正解ゾーン ±50c -->
+        <path d="" id="zone50" stroke="rgba(255,179,71,.25)" stroke-width="10" fill="none"/>
+        <!-- グリーンゾーン ±10c -->
+        <path d="" id="zone10" stroke="var(--green)" stroke-width="10" fill="none" opacity=".8"/>
+        <!-- ラベル -->
+        <text id="lblL" font-size="12" fill="#8fa1b0" text-anchor="middle" font-family="monospace">-50</text>
+        <text id="lblC" font-size="12" fill="#8fa1b0" text-anchor="middle" font-family="monospace">0</text>
+        <text id="lblR" font-size="12" fill="#8fa1b0" text-anchor="middle" font-family="monospace">+50</text>
+        <!-- 針 -->
+        <g id="needle" transform="rotate(0 150 150)">
+          <line x1="150" y1="150" x2="150" y2="44" stroke="var(--amber)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="150" cy="150" r="7" fill="var(--amber)"/>
+        </g>
+        <text x="150" y="166" font-size="10" fill="#54667a" text-anchor="middle" font-family="monospace">cents</text>
+      </svg>
+    </div>
+    <div class="readout">
+      <div class="note-big"><span id="noteName">—</span><span class="oct" id="noteOct"></span></div>
+      <div class="freq"><span id="freqVal">---.-</span> Hz</div>
+      <div class="cents-label" id="centsVal">± -- cents</div>
+      <div class="judge-msg" id="judgeMsg"></div>
+      <div class="hold-bar"><i id="holdBar"></i></div>
+    </div>
+  </div>
+  <canvas id="wave"></canvas>
+</div>
+
+<!-- ===== モード ===== -->
+<div class="tabs">
+  <button class="tab active" data-mode="tuner">チューナー</button>
+  <button class="tab" data-mode="single">単音発声</button>
+  <button class="tab" data-mode="scale">音階練習</button>
+</div>
+
+<div class="card" id="pane-tuner">
+  <h2>チューナー(自由練習)</h2>
+  <p class="hint">マイクを開始して声を出すと、検出した音程がメーターと鍵盤に表示されます。鍵盤をクリックすると参照音が鳴ります。</p>
+</div>
+
+<div class="card" id="pane-single" style="display:none">
+  <h2>単音発声トレーニング</h2>
+  <div class="row">
+    <label>出題範囲</label>
+    <select id="rangePreset">
+      <option value="male">男性向け (G2〜G4)</option>
+      <option value="female">女性向け (G3〜G5)</option>
+      <option value="custom" selected>カスタム</option>
+    </select>
+    <select id="rangeLow"></select>
+    <span style="color:var(--ink-dim)">〜</span>
+    <select id="rangeHigh"></select>
+    <button class="btn primary" id="quizBtn">▶ 出題</button>
+    <button class="btn" id="replayBtn" disabled>🔁 もう一度聞く</button>
+    <button class="btn" id="passBtn" disabled>答えを見てパス</button>
+    <span class="score">正解 <span id="scoreOk">0</span> / <span id="scoreAll">0</span></span>
+  </div>
+  <p class="hint">出題音を聞いて、同じ高さの声を出してください。発声中は高い/低いをリアルタイム表示します。±50セント以内を<strong>約1.5秒キープで正解</strong>、外れた音程のまま安定すると<strong>不正解</strong>が確定します。不正解後もそのまま発声を続けて、正しい音が出せるまで練習できます(スコアは不正解のまま)。</p>
+</div>
+
+<div class="card" id="pane-scale" style="display:none">
+  <h2>音階練習</h2>
+  <div class="row">
+    <label>パターン</label>
+    <select id="pattern">
+      <option value="p1">ドレミファソ ファミレド</option>
+      <option value="p2">ドレミファソラシド シラソファミレド</option>
+    </select>
+    <label>開始音</label>
+    <select id="scaleBase"></select>
+    <label>テンポ</label>
+    <input type="range" id="bpm" min="40" max="160" value="80" step="5">
+    <span class="val" id="bpmVal">80 BPM</span>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" id="guideOn" checked> ガイド音を鳴らす</label>
+    <button class="btn primary" id="scaleStart">▶ スタート</button>
+    <button class="btn" id="scaleStop" disabled>■ 停止</button>
+    <span class="score" id="scaleInfo"></span>
+  </div>
+  <div class="chips" id="scaleChips"></div>
+  <p class="hint">1周ごとに半音ずつ上がっていきます。※ガイド音ON時はマイクがアプリの音を拾うため<strong>ヘッドホン推奨</strong>です。</p>
+</div>
+
+<!-- ===== ピアノ ===== -->
+<div class="card">
+  <h2>Keyboard — A0 ~ C8 (88 keys)</h2>
+  <div class="piano-scroll"><div class="piano" id="piano"></div></div>
+</div>
+
+<footer>Prototype — Web Audio API / YINピッチ検出 / 画像・音声素材は未使用(全てコード生成)</footer>
+
+<script>
+"use strict";
+/* ============ 音名ユーティリティ ============ */
+const NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const noteName = m => NAMES[m % 12];
+const noteOct  = m => Math.floor(m / 12) - 1;
+const noteFull = m => noteName(m) + noteOct(m);
+const freqOf   = m => 440 * Math.pow(2, (m - 69) / 12);
+
+/* ============ AudioContext / 音の出力 ============ */
+let ctx = null;
+function audio() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+
+function playTone(midi, dur = 0.9) {
+  const a = audio(), t = a.currentTime;
+  const f = freqOf(midi);
+  const master = a.createGain();
+  master.connect(a.destination);
+
+  if (document.getElementById("timbre").value === "beep") {
+    const o = a.createOscillator();
+    o.type = "sine"; o.frequency.value = f;
+    o.connect(master);
+    master.gain.setValueAtTime(0, t);
+    master.gain.linearRampToValueAtTime(0.25, t + 0.01);
+    master.gain.setValueAtTime(0.25, t + dur - 0.08);
+    master.gain.linearRampToValueAtTime(0.0001, t + dur);
+    o.start(t); o.stop(t + dur);
+  } else {
+    // 簡易ピアノ: 倍音加算 + 減衰エンベロープ
+    const partials = [1, 2, 3, 4, 5, 6];
+    const gains    = [1, .45, .22, .11, .06, .03];
+    master.gain.setValueAtTime(0.22, t);
+    partials.forEach((p, i) => {
+      const o = a.createOscillator();
+      const g = a.createGain();
+      o.type = "sine";
+      o.frequency.value = f * p * (1 + 0.0004 * p * p); // わずかな不協和性
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(gains[i], t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur * (1.6 - i * 0.15));
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + dur * 1.7);
+    });
+  }
+}
+function playSuccess() {
+  const a = audio(), t = a.currentTime;
+  [880, 1318.5].forEach((f, i) => {
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = "triangle"; o.frequency.value = f;
+    g.gain.setValueAtTime(0.12, t + i * 0.1);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.1 + 0.25);
+    o.connect(g); g.connect(a.destination);
+    o.start(t + i * 0.1); o.stop(t + i * 0.1 + 0.3);
+  });
+}
+
+function playFail() {
+  const a = audio(), t = a.currentTime;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = "triangle";
+  o.frequency.setValueAtTime(330, t);
+  o.frequency.linearRampToValueAtTime(220, t + 0.25);
+  g.gain.setValueAtTime(0.10, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+  o.connect(g); g.connect(a.destination);
+  o.start(t); o.stop(t + 0.4);
+}
+
+/* ============ マイク + ピッチ検出 ============ */
+let analyser = null, micBuf = null, micOn = false;
+
+document.getElementById("micBtn").addEventListener("click", async () => {
+  if (micOn) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: {
+      echoCancellation: false, noiseSuppression: false, autoGainControl: false
+    }});
+    const a = audio();
+    const src = a.createMediaStreamSource(stream);
+    // 高次倍音のエネルギーを抑えるローパス(人声の基音レンジ ~1kHz は通す)
+    const lpf = a.createBiquadFilter();
+    lpf.type = "lowpass";
+    lpf.frequency.value = 1200;
+    analyser = a.createAnalyser();
+    analyser.fftSize = 4096; // 窓を約85msに拡大し低音(男性の声)の分解能を確保
+    micBuf = new Float32Array(analyser.fftSize);
+    src.connect(lpf);
+    lpf.connect(analyser);
+    micOn = true;
+    const b = document.getElementById("micBtn");
+    b.textContent = "🎤 マイク動作中";
+    b.disabled = true;
+  } catch (e) {
+    alert("マイクを取得できませんでした: " + e.message);
+  }
+});
+
+/* ピッチ検出: YIN法 (de Cheveigné & Kawahara, 2002)
+   差分関数を累積平均で正規化(CMNDF)し、閾値を最初に下回るラグを採用する。
+   「最も強い周期」ではなく「最も短い妥当な周期=基音」を選ぶため、
+   倍音にロックして実際よりオクターブ以上高く誤検出する問題に強い。 */
+const YIN_THRESHOLD = 0.15;
+const F_MIN = 55, F_MAX = 1200; // 人声レンジ(A1〜ソプラノ上限程度)
+
+function detectPitch(buf, sr) {
+  const SIZE = buf.length;
+  let rms = 0;
+  for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+  rms = Math.sqrt(rms / SIZE);
+  if (rms < 0.015) return -1; // 無音/息ノイズは棄却
+
+  const half = SIZE >> 1;
+  const tauMin = Math.floor(sr / F_MAX);
+  const tauMax = Math.min(Math.floor(sr / F_MIN), half - 1);
+
+  // 差分関数 d(tau)
+  const d = new Float32Array(tauMax + 1);
+  for (let tau = tauMin; tau <= tauMax; tau++) {
+    let sum = 0;
+    for (let i = 0; i < half; i++) {
+      const diff = buf[i] - buf[i + tau];
+      sum += diff * diff;
+    }
+    d[tau] = sum;
+  }
+  // 累積平均正規化 (CMNDF) — tauMin未満も累積に含める必要があるため全域計算
+  const cm = new Float32Array(tauMax + 1);
+  cm[0] = 1;
+  let running = 0;
+  for (let tau = 1; tau <= tauMax; tau++) {
+    if (tau < tauMin) {
+      // 高域側のdも累積に必要なので軽量計算
+      let sum = 0;
+      for (let i = 0; i < half; i += 2) { // 2サンプル間引きで近似
+        const diff = buf[i] - buf[i + tau];
+        sum += diff * diff;
+      }
+      running += sum * 2;
+      cm[tau] = 1;
+    } else {
+      running += d[tau];
+      cm[tau] = d[tau] * tau / running;
+    }
+  }
+
+  // 閾値を最初に下回るラグ(=基音の周期)を探し、その局所最小まで進める
+  let tau = -1;
+  for (let t = tauMin; t <= tauMax; t++) {
+    if (cm[t] < YIN_THRESHOLD) {
+      while (t + 1 <= tauMax && cm[t + 1] < cm[t]) t++;
+      tau = t;
+      break;
+    }
+  }
+  // 見つからない場合: 全域の最小値がそこそこ低ければ採用(弱い声への救済)
+  if (tau === -1) {
+    let best = tauMin;
+    for (let t = tauMin; t <= tauMax; t++) if (cm[t] < cm[best]) best = t;
+    if (cm[best] < 0.30) tau = best; else return -1;
+  }
+
+  // 放物線補間でサブサンプル精度に
+  const x1 = cm[tau - 1] ?? cm[tau], x2 = cm[tau], x3 = cm[tau + 1] ?? cm[tau];
+  const a = (x1 + x3 - 2 * x2) / 2, b = (x3 - x1) / 2;
+  const betterTau = a ? tau - b / (2 * a) : tau;
+
+  const f = sr / betterTau;
+  return (f >= F_MIN && f <= F_MAX) ? f : -1;
+}
+
+/* ===== 平滑化(人声向けチューニング) =====
+   人間の声はジッター/ビブラートで常時±20〜40セント程度揺れるため、
+   1) メディアンフィルタ(約150ms)で外れ値除去
+   2) EMA(指数移動平均)で滑らかに追従
+   3) オクターブ誤検出などの瞬間的な大ジャンプは棄却
+   の多段構成にする。意図的な音程変化(>0.7半音が連続)には素早く追従する。 */
+const recent = [];
+let emaMidi = null;
+function smoothMidi(mf) {
+  recent.push(mf);
+  if (recent.length > 9) recent.shift();
+  const s = [...recent].sort((x, y) => x - y);
+  const med = s[Math.floor(s.length / 2)];
+
+  if (emaMidi == null) { emaMidi = med; return emaMidi; }
+
+  const diff = med - emaMidi;
+  if (Math.abs(diff) > 0.7) {
+    // 大きな変化: 直近3フレームが同じ方向で安定していれば「意図的な音程移動」として即追従
+    const last3 = recent.slice(-3);
+    const stable = last3.length === 3 && last3.every(v => Math.abs(v - med) < 0.7);
+    if (stable) emaMidi = med;
+    // 不安定なら瞬間ノイズとみなし現在値を維持
+  } else {
+    emaMidi = emaMidi + diff * 0.18; // ゆっくり追従(時定数 ≒ 90ms)
+  }
+  return emaMidi;
+}
+function resetSmoothing() { recent.length = 0; emaMidi = null; shownNote = null; }
+
+/* 音名表示のヒステリシス: 音の境界(±50c)付近で表示がチラつくのを防ぐ。
+   表示中の音から±65セント以上離れて初めて音名を切り替える。 */
+let shownNote = null;
+function noteWithHysteresis(mf) {
+  if (shownNote == null || Math.abs(mf - shownNote) > 0.65) shownNote = Math.round(mf);
+  return shownNote;
+}
+
+/* ============ メーターSVG初期化 ============ */
+(function initGauge() {
+  const cx = 150, cy = 150;
+  const pol = (r, deg) => {
+    const rad = deg * Math.PI / 180;
+    return [cx + r * Math.sin(rad), cy - r * Math.cos(rad)];
+  };
+  const ticks = document.getElementById("ticks");
+  let html = "";
+  for (let c = -50; c <= 50; c += 10) {
+    const deg = c / 50 * 60;
+    const major = (c === 0 || Math.abs(c) === 50);
+    const [x1, y1] = pol(major ? 100 : 106, deg);
+    const [x2, y2] = pol(118, deg);
+    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${major ? 'stroke-width="3" stroke="#8fa1b0"' : ""}/>`;
+  }
+  ticks.innerHTML = html;
+  const arc = (r, c1, c2) => {
+    const [x1, y1] = pol(r, c1 / 50 * 60), [x2, y2] = pol(r, c2 / 50 * 60);
+    return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`;
+  };
+  document.getElementById("zone50").setAttribute("d", arc(124, -50, 50));
+  document.getElementById("zone10").setAttribute("d", arc(124, -10, 10));
+  const put = (id, c, r) => {
+    const [x, y] = pol(r, c / 50 * 60);
+    const el = document.getElementById(id);
+    el.setAttribute("x", x); el.setAttribute("y", y);
+  };
+  put("lblL", -50, 138); put("lblC", 0, 138); put("lblR", 50, 138);
+})();
+
+let needleDeg = 0;
+function setNeedle(cents, active) {
+  const target = Math.max(-60, Math.min(60, cents / 50 * 60));
+  needleDeg += (target - needleDeg) * 0.10; // ゆったり追従(アナログメーター風)
+  const n = document.getElementById("needle");
+  n.setAttribute("transform", `rotate(${needleDeg.toFixed(2)} 150 150)`);
+  n.style.opacity = active ? 1 : 0.3;
+}
+
+/* ============ ピアノ鍵盤 ============ */
+const WK_W = 25, BK_W = 15;
+const keyEls = {};
+(function buildPiano() {
+  const piano = document.getElementById("piano");
+  let whiteCount = 0;
+  let html = "";
+  for (let m = 21; m <= 108; m++) {
+    const isBlack = noteName(m).includes("#");
+    if (!isBlack) {
+      const left = whiteCount * WK_W;
+      const lbl = noteName(m) === "C" ? `<span class="klabel">C${noteOct(m)}</span>` : "";
+      html += `<div class="wk key" data-midi="${m}" style="left:${left}px">${lbl}</div>`;
+      whiteCount++;
+    } else {
+      const left = whiteCount * WK_W - BK_W / 2;
+      html += `<div class="bk key" data-midi="${m}" style="left:${left}px"></div>`;
+    }
+  }
+  piano.style.width = (whiteCount * WK_W) + "px";
+  piano.innerHTML = html;
+  piano.addEventListener("pointerdown", e => {
+    const k = e.target.closest(".key");
+    if (k) playTone(+k.dataset.midi);
+  });
+  document.querySelectorAll(".key").forEach(k => keyEls[k.dataset.midi] = k);
+  // 中央(C4付近)へスクロール
+  requestAnimationFrame(() => {
+    document.querySelector(".piano-scroll").scrollLeft = 23 * WK_W - 200;
+  });
+})();
+
+let sungKey = null, targetKey = null;
+function highlightSung(midi) {
+  if (sungKey) sungKey.classList.remove("sung");
+  sungKey = midi != null ? keyEls[midi] : null;
+  if (sungKey) sungKey.classList.add("sung");
+}
+function highlightTarget(midi) {
+  if (targetKey) targetKey.classList.remove("target");
+  targetKey = midi != null ? keyEls[midi] : null;
+  if (targetKey) {
+    targetKey.classList.add("target");
+    targetKey.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }
+}
+
+/* ============ モード切替 ============ */
+let mode = "tuner";
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  mode = t.dataset.mode;
+  ["tuner", "single", "scale"].forEach(m =>
+    document.getElementById("pane-" + m).style.display = m === mode ? "" : "none");
+  if (mode !== "scale") stopScale();
+  if (mode !== "single") {
+    single.target = null; single.retry = false;
+    highlightTarget(null); setMsg("");
+    document.getElementById("quizBtn").disabled = false;
+    document.getElementById("holdBar").style.width = "0";
+  }
+}));
+
+function setMsg(text, cls = "") {
+  const el = document.getElementById("judgeMsg");
+  el.textContent = text;
+  el.className = "judge-msg " + cls;
+}
+
+/* ============ 単音発声モード ============ */
+const QUIZ_TONE_DUR = 3.0;   // 出題音の長さ(秒)
+const OK_HOLD_MS    = 1500;  // 正解確定: ±50c以内をこの時間キープ
+const NG_HOLD_MS    = 1200;  // 不正解確定: 外れた音で安定したらこの時間で確定
+const single = { target: null, judgeFrom: 0, holdMs: 0, wrongMs: 0,
+                 lastT: 0, ok: 0, all: 0, solved: true, retry: false };
+
+(function initSingle() {
+  const low = document.getElementById("rangeLow");
+  const high = document.getElementById("rangeHigh");
+  for (let m = 36; m <= 84; m++) {
+    low.add(new Option(noteFull(m), m));
+    high.add(new Option(noteFull(m), m));
+  }
+  low.value = 48;  // C3
+  high.value = 72; // C5
+
+  /* 出題範囲プリセット
+     一般的な(訓練していない人を含む)無理のない声域として約2オクターブ:
+       男性: G2(98Hz) 〜 G4(392Hz)  バス〜テノールをおおむねカバー
+       女性: G3(196Hz) 〜 G5(784Hz) アルト〜ソプラノをおおむねカバー */
+  const PRESETS = { male: [43, 67], female: [55, 79] }; // MIDI: G2-G4 / G3-G5
+  const preset = document.getElementById("rangePreset");
+  function applyPreset() {
+    const p = PRESETS[preset.value];
+    const custom = !p;
+    low.disabled = high.disabled = !custom;
+    if (p) { low.value = p[0]; high.value = p[1]; }
+  }
+  preset.addEventListener("change", applyPreset);
+  // 手動で範囲を触ったらカスタム扱いに(プリセット選択中はdisabledなので通常起きないが保険)
+  [low, high].forEach(el => el.addEventListener("change", () => {
+    if (preset.value !== "custom") preset.value = "custom";
+  }));
+  applyPreset();
+})();
+
+document.getElementById("quizBtn").addEventListener("click", () => {
+  if (!micOn) { alert("先にマイクを開始してください"); return; }
+  const lo = +document.getElementById("rangeLow").value;
+  const hi = +document.getElementById("rangeHigh").value;
+  if (lo > hi) { alert("出題範囲が不正です"); return; }
+  single.target = lo + Math.floor(Math.random() * (hi - lo + 1));
+  single.all++; single.solved = false; single.retry = false;
+  single.holdMs = 0; single.wrongMs = 0;
+  document.getElementById("holdBar").style.width = "0";
+  document.getElementById("quizBtn").disabled = true; // 判定が確定するまで次の出題は不可
+  document.getElementById("scoreAll").textContent = single.all;
+  document.getElementById("replayBtn").disabled = false;
+  document.getElementById("passBtn").disabled = false;
+  highlightTarget(null); // 答えは隠す
+  playTone(single.target, QUIZ_TONE_DUR);
+  single.judgeFrom = performance.now() + QUIZ_TONE_DUR * 1000 + 200; // 再生終了後に判定開始
+  setMsg("この音を発声してください…");
+});
+document.getElementById("replayBtn").addEventListener("click", () => {
+  if (single.target == null) return;
+  playTone(single.target, QUIZ_TONE_DUR);
+  single.judgeFrom = performance.now() + QUIZ_TONE_DUR * 1000 + 200;
+});
+document.getElementById("passBtn").addEventListener("click", () => {
+  if (single.target == null || single.solved) return;
+  single.solved = true; single.retry = false;
+  highlightTarget(single.target);
+  setMsg(`答えは ${noteFull(single.target)} でした`, "ng");
+  document.getElementById("passBtn").disabled = true;
+  document.getElementById("quizBtn").disabled = false;
+  document.getElementById("holdBar").style.width = "0";
+});
+
+function judgeSingle(midiFloat, now) {
+  if (mode !== "single" || single.target == null || single.solved) return;
+  if (now < single.judgeFrom) { setMsg("♪ 出題音を再生中…よく聞いてください"); return; }
+
+  const dt = single.lastT ? now - single.lastT : 16;
+  const ansLabel = single.retry ? `正解の ${noteFull(single.target)} ` : "この音";
+
+  if (midiFloat == null) {
+    // 無音: タイマーを戻しつつ待機
+    single.holdMs  = Math.max(0, single.holdMs - dt);
+    single.wrongMs = Math.max(0, single.wrongMs - dt * 2);
+    setMsg(`${ansLabel}を発声してください…`, single.retry ? "ng" : "");
+  } else {
+    const cents = (midiFloat - single.target) * 100;
+
+    if (Math.abs(cents) <= 50) {
+      single.holdMs += dt;
+      single.wrongMs = 0;
+      setMsg("✔ その音をキープ…!", "ok");
+    } else {
+      single.holdMs = Math.max(0, single.holdMs - dt * 2);
+      single.wrongMs += dt;
+      // リアルタイムの高低ヒント
+      setMsg(cents > 0 ? "↓ 高すぎます。もう少し低く" : "↑ 低すぎます。もう少し高く", "ng");
+    }
+  }
+
+  document.getElementById("holdBar").style.width =
+    Math.min(100, single.holdMs / OK_HOLD_MS * 100) + "%";
+
+  // ―― 正解音をキープできた ――
+  if (single.holdMs >= OK_HOLD_MS) {
+    if (single.retry) {
+      // 不正解確定後の練習: スコアは変えずに「出せたこと」を確認
+      single.solved = true; single.retry = false;
+      document.getElementById("holdBar").style.width = "0";
+      setMsg(`✔ 正しい音 ${noteFull(single.target)} が出せました!(記録は不正解のまま)`, "ok");
+      playSuccess();
+    } else {
+      finishSingle(true, midiFloat);
+    }
+    return;
+  }
+  // ―― 不正解の確定: 外れた音程で安定してしまった場合(初回のみ) ――
+  if (!single.retry && single.wrongMs >= NG_HOLD_MS) {
+    finishSingle(false, midiFloat);
+  }
+}
+
+function finishSingle(passed, midiFloat) {
+  document.getElementById("passBtn").disabled = true;
+  document.getElementById("quizBtn").disabled = false; // 判定確定 → 次の出題を許可
+  document.getElementById("holdBar").style.width = "0";
+  highlightTarget(single.target);
+  if (passed) {
+    single.solved = true;
+    single.ok++;
+    document.getElementById("scoreOk").textContent = single.ok;
+    setMsg(`正解! ${noteFull(single.target)} 🎉`, "ok");
+    playSuccess();
+  } else {
+    // 不正解はスコア確定。ただし問題は閉じず、正しい音を出すまで練習を継続できる
+    single.retry = true;
+    single.holdMs = 0; single.wrongMs = 0;
+    const sung = midiFloat != null ? noteFull(Math.round(midiFloat)) : "?";
+    const dir = midiFloat != null && midiFloat > single.target ? "高い" : "低い";
+    setMsg(`不正解… 正解は ${noteFull(single.target)}(あなたの声は ${sung} で${dir}でした)。続けて正しい音を出してみましょう`, "ng");
+    playFail();
+  }
+}
+
+/* ============ 音階練習モード ============ */
+const PATTERNS = {
+  p1: [0, 2, 4, 5, 7, 5, 4, 2, 0],
+  p2: [0, 2, 4, 5, 7, 9, 11, 12, 11, 9, 7, 5, 4, 2, 0],
+};
+const scale = { running: false, base: 48, idx: 0, hits: 0, voiced: 0,
+                timer: null, round: 0, results: [] };
+
+(function initScale() {
+  const sel = document.getElementById("scaleBase");
+  for (let m = 36; m <= 72; m++) sel.add(new Option(noteFull(m), m));
+  sel.value = 48; // C3
+  const bpm = document.getElementById("bpm");
+  bpm.addEventListener("input", () =>
+    document.getElementById("bpmVal").textContent = bpm.value + " BPM");
+})();
+
+function buildChips() {
+  const pat = PATTERNS[document.getElementById("pattern").value];
+  const wrap = document.getElementById("scaleChips");
+  wrap.innerHTML = pat.map((iv, i) =>
+    `<span class="chip" id="chip${i}">${noteFull(scale.base + iv)}</span>`).join("");
+}
+
+document.getElementById("scaleStart").addEventListener("click", () => {
+  if (!micOn) { alert("先にマイクを開始してください"); return; }
+  scale.running = true;
+  scale.base = +document.getElementById("scaleBase").value;
+  scale.round = 1;
+  document.getElementById("scaleStart").disabled = true;
+  document.getElementById("scaleStop").disabled = false;
+  startRound();
+});
+document.getElementById("scaleStop").addEventListener("click", stopScale);
+
+function stopScale() {
+  scale.running = false;
+  clearTimeout(scale.timer);
+  highlightTarget(null);
+  document.getElementById("scaleStart").disabled = false;
+  document.getElementById("scaleStop").disabled = true;
+}
+
+/* 基音のメジャートライアド(ド・ミ・ソ)を和音で鳴らす */
+function playTriad(rootMidi, durSec) {
+  [0, 4, 7].forEach(iv => playTone(rootMidi + iv, durSec));
+}
+
+function startRound() {
+  if (!scale.running) return;
+  buildChips();
+  scale.idx = -1;
+  scale.results = [];
+  const beat = 60000 / +document.getElementById("bpm").value;
+
+  // 開始前に基音のトライアドを一度鳴らして調を提示する
+  const guide = document.getElementById("guideOn").checked;
+  document.getElementById("scaleInfo").textContent =
+    `ラウンド ${scale.round} — 基音 ${noteFull(scale.base)}` + (guide ? " ♪ コードを再生中…" : "");
+  highlightTarget(scale.base);
+  if (guide) playTriad(scale.base, beat * 2 / 1000);
+
+  scale.timer = setTimeout(() => {
+    if (!scale.running) return;
+    document.getElementById("scaleInfo").textContent =
+      `ラウンド ${scale.round} — 基音 ${noteFull(scale.base)}`;
+    nextScaleNote();
+  }, guide ? beat * 2.5 : beat * 0.5);
+}
+
+function nextScaleNote() {
+  if (!scale.running) return;
+  const pat = PATTERNS[document.getElementById("pattern").value];
+  const beat = 60000 / +document.getElementById("bpm").value;
+
+  // 直前ノートの判定確定
+  if (scale.idx >= 0) {
+    const pass = scale.hits >= Math.max(6, scale.voiced * 0.35);
+    scale.results.push(pass);
+    const chip = document.getElementById("chip" + scale.idx);
+    chip.classList.remove("now");
+    chip.classList.add(pass ? "pass" : "fail");
+  }
+  scale.idx++;
+
+  if (scale.idx >= pat.length) {
+    // 1周終了 → 結果表示して半音上げ
+    const okCount = scale.results.filter(Boolean).length;
+    document.getElementById("scaleInfo").textContent =
+      `ラウンド ${scale.round} 結果: ${okCount}/${pat.length}  → 半音上げます`;
+    scale.round++;
+    scale.base++;
+    if (scale.base + Math.max(...pat) > 96 || scale.round > 24) { stopScale(); return; }
+    scale.timer = setTimeout(startRound, beat * 2);
+    return;
+  }
+
+  const midi = scale.base + pat[scale.idx];
+  scale.hits = 0; scale.voiced = 0;
+  document.getElementById("chip" + scale.idx).classList.add("now");
+  highlightTarget(midi);
+  if (document.getElementById("guideOn").checked)
+    playTone(midi, Math.max(0.5, beat / 1000 * 0.95)); // ほぼ1拍ぶん鳴らす
+  scale.timer = setTimeout(nextScaleNote, beat);
+}
+
+function judgeScale(midiFloat) {
+  if (mode !== "scale" || !scale.running || scale.idx < 0) return;
+  const pat = PATTERNS[document.getElementById("pattern").value];
+  if (scale.idx >= pat.length) return;
+  if (midiFloat != null) {
+    scale.voiced++;
+    const cents = (midiFloat - (scale.base + pat[scale.idx])) * 100;
+    if (Math.abs(cents) <= 60) scale.hits++;
+  }
+}
+
+/* ============ メインループ ============ */
+const waveCanvas = document.getElementById("wave");
+const waveCtx = waveCanvas.getContext("2d");
+
+let voicedFrames = 0;   // 発声開始ゲート: 連続Nフレーム検出して初めて表示
+let silentFrames = 0;   // 終了ゲート: 短い途切れでは表示を消さない
+let lastTextT = 0;      // 数値表示は10Hzに間引き(数字のチラつき防止)
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  let midiFloat = null, raw = -1;
+
+  if (micOn && analyser) {
+    analyser.getFloatTimeDomainData(micBuf);
+    drawWave(micBuf);
+    raw = detectPitch(micBuf, ctx.sampleRate);
+  }
+
+  if (raw > 0) {
+    voicedFrames++; silentFrames = 0;
+  } else {
+    silentFrames++;
+    if (silentFrames > 8) voicedFrames = 0; // 約130ms無音で発声終了とみなす
+  }
+
+  // 連続4フレーム(約65ms)検出して初めて「発声中」扱い → 子音や瞬間ノイズを無視
+  const voiced = voicedFrames >= 4;
+  if (voiced && raw > 0) {
+    midiFloat = smoothMidi(69 + 12 * Math.log2(raw / 440));
+  } else if (voiced && emaMidi != null) {
+    midiFloat = emaMidi; // 短い途切れ中は直前の値を保持
+  }
+
+  if (midiFloat != null) {
+    const nearest = noteWithHysteresis(midiFloat);
+
+    // メーター基準: ターゲットがあればターゲット比、なければ表示中の音比
+    let refMidi = nearest;
+    if (mode === "single" && single.target != null && !single.solved) refMidi = single.target;
+    if (mode === "scale" && scale.running && targetKey) refMidi = +targetKey.dataset.midi;
+    const cents = (midiFloat - refMidi) * 100;
+    setNeedle(cents, true);
+    highlightSung(nearest >= 21 && nearest <= 108 ? nearest : null);
+
+    if (now - lastTextT > 100) { // テキストは10Hz更新
+      lastTextT = now;
+      document.getElementById("noteName").textContent = noteName(nearest);
+      document.getElementById("noteOct").textContent = noteOct(nearest);
+      document.getElementById("freqVal").textContent = freqOf(midiFloat).toFixed(1);
+      document.getElementById("centsVal").textContent =
+        (cents >= 0 ? "+" : "") + cents.toFixed(0) + " cents";
+    }
+  } else {
+    if (silentFrames > 8) {
+      resetSmoothing();
+      document.getElementById("noteName").textContent = "—";
+      document.getElementById("noteOct").textContent = "";
+      document.getElementById("freqVal").textContent = "---.-";
+      document.getElementById("centsVal").textContent = "± -- cents";
+      setNeedle(0, false);
+      highlightSung(null);
+    }
+  }
+
+  judgeSingle(midiFloat, now);
+  judgeScale(midiFloat);
+  single.lastT = now;
+}
+requestAnimationFrame(loop);
+
+function drawWave(buf) {
+  const w = waveCanvas.width = waveCanvas.clientWidth;
+  const h = waveCanvas.height = waveCanvas.clientHeight;
+  waveCtx.clearRect(0, 0, w, h);
+  waveCtx.strokeStyle = "#6bb8ff";
+  waveCtx.lineWidth = 1.2;
+  waveCtx.beginPath();
+  for (let i = 0; i < buf.length; i++) {
+    const x = i / buf.length * w;
+    const y = h / 2 + buf[i] * h * 0.9;
+    i ? waveCtx.lineTo(x, y) : waveCtx.moveTo(x, y);
+  }
+  waveCtx.stroke();
+}
+</script>
+</body>
+</html>
