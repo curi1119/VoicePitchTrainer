@@ -74,6 +74,29 @@ describe('detectPitch (YIN) 回帰テスト', () => {
     expect(Math.abs((midiOf(got) - 57) * 100)).toBeLessThanOrEqual(2) // A3
   })
 
+  it('ノイズ優勢の微小信号で誤った音程を返さない(減衰した発声末尾の回帰)', () => {
+    // 長い発声の末尾で声が減衰しノイズと拮抗すると、救済ルールがオクターブ下などの
+    // 誤ラグを拾って「ピッチずれ」を起こしていた(2026-06-13 修正)。
+    // 検出するなら正しい音、さもなくば棄却(-1)が正。誤値だけは返してはならない
+    for (let trial = 0; trial < 20; trial++) {
+      const rand = mulberry32(0xdecae ^ trial)
+      const buf = new Float32Array(N)
+      for (let i = 0; i < N; i++) {
+        let v = 0
+        for (let h = 1; h <= 6; h++) {
+          v +=
+            [0.05, 0.15, 0.3, 0.28, 0.25, 0.18][h - 1] *
+            Math.sin((2 * Math.PI * 220 * h * i) / SR + h * 0.7)
+        }
+        buf[i] = v * 0.0126 + (rand() * 2 - 1) * 0.004
+      }
+      const got = detectPitch(buf, SR)
+      if (got > 0) {
+        expect(Math.abs((midiOf(got) - 57) * 100), `trial ${trial}`).toBeLessThanOrEqual(50)
+      }
+    }
+  })
+
   it('純音(サイン波)も検出できる', () => {
     const buf = new Float32Array(N)
     for (let i = 0; i < N; i++) buf[i] = 0.3 * Math.sin((2 * Math.PI * 440 * i) / SR)

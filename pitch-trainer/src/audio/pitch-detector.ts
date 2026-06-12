@@ -61,8 +61,10 @@ export function detectPitch(buf: Float32Array, sampleRate: number): number {
       break
     }
   }
-  // 見つからない場合: 全域の最小値がそこそこ低ければ採用(弱い声への救済)
+  // 見つからない場合: 全域の最小値がそこそこ低ければ採用(弱い声への救済)。
+  // ただし低音量時はノイズ優勢の誤ラグ(オクターブ下等)を拾いやすいため救済しない
   if (tau === -1) {
+    if (rms < PITCH.FALLBACK_MIN_RMS) return -1
     let best = tauMin
     for (let t = tauMin; t <= tauMax; t++) if (cm[t] < cm[best]) best = t
     if (cm[best] < PITCH.FALLBACK_CMNDF) tau = best
