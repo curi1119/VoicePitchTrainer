@@ -21,6 +21,7 @@ import { PitchGraph, type PitchGraphHandle } from './components/PitchGraph'
 import { ScalePane, type Chip } from './components/ScalePane'
 import { SinglePane, type PresetKey } from './components/SinglePane'
 import { Button, Card } from './components/ui'
+import { VolumeControl } from './components/VolumeControl'
 
 type Mode = 'tuner' | 'keyboard' | 'single' | 'scale'
 
@@ -358,25 +359,13 @@ export default function App() {
           </span>
         </h1>
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <span className="flex items-center gap-1">
-            <span aria-hidden className="text-xs">
-              🔊
-            </span>
-            <input
-              aria-label="音量"
-              type="range"
-              className="ctl w-12 sm:w-24"
-              min={0}
-              max={1}
-              step={0.05}
-              value={volume}
-              onChange={(e) => {
-                const v = Number(e.target.value)
-                setVolume(v)
-                localStorage.setItem('master-volume', String(v))
-              }}
-            />
-          </span>
+          <VolumeControl
+            volume={volume}
+            onChange={(v) => {
+              setVolume(v)
+              localStorage.setItem('master-volume', String(v))
+            }}
+          />
           <select
             aria-label="音色"
             className="ctl"
