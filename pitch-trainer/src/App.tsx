@@ -427,14 +427,17 @@ export default function App() {
       {/* 鍵盤モード: 88鍵のみを画面いっぱいに表示(スマホは縦置き=低音が下) */}
       {mode === 'keyboard' && (
         <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
+          {/* 鍵が間延びしないよう長さに上限(実物のピアノ比)を設け、左右中央に置く */}
           <div className="min-h-0 flex-1 md:hidden">
-            <Piano
-              vertical
-              thickness={40}
-              sung={sung}
-              target={target}
-              onPlay={(m) => playTone(m, timbre)}
-            />
+            <div className="mx-auto h-full max-w-[260px]">
+              <Piano
+                vertical
+                thickness={40}
+                sung={sung}
+                target={target}
+                onPlay={(m) => playTone(m, timbre)}
+              />
+            </div>
           </div>
           {/* 鍵が間延びしないよう長さに上限を設け、縦方向は中央に置く */}
           <div className="hidden min-h-0 flex-1 md:flex md:items-center">
