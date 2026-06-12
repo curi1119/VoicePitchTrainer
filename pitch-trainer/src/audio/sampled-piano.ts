@@ -39,8 +39,16 @@ export function loadSampledPiano(
   onProgress?: (p: SampledPianoProgress) => void,
 ): Promise<void> {
   loading ??= (async () => {
+    // スマホのスピーカーでも十分な音量になるよう、ブースト → コンプレッサー(音割れ防止)
+    // を経由して出力する
+    const compressor = ctx.createDynamicsCompressor()
+    compressor.connect(ctx.destination)
+    const boost = ctx.createGain()
+    boost.gain.value = SYNTH.SAMPLED_BOOST
+    boost.connect(compressor)
     piano = new SplendidGrandPiano(ctx, {
       volume: SYNTH.SAMPLED_VOLUME,
+      destination: boost,
       ...('caches' in window ? { storage: new CacheStorage(CACHE_NAME) } : {}),
       ...(onProgress ? { onLoadProgress: onProgress } : {}),
     })
