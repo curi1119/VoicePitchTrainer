@@ -5,15 +5,16 @@
 ## 前提
 
 - WSL2(Ubuntu 等)上で開発し、Git で管理
-- Node.js 22.12 以上(Vite・Vitest の実行系。CI は 24 LTS を使用)
-- **Bun**(パッケージ管理・スクリプト実行)。asdf で導入し、バージョンはリポジトリ直下の `.tool-versions` に従う:
+- **Node.js**(Vite・Vitest の実行系)と **Bun**(パッケージ管理・スクリプト実行)は asdf で導入し、リポジトリ直下の `.tool-versions` でバージョン固定(CI も同じファイルを参照):
 
   ```bash
+  asdf plugin add nodejs
   asdf plugin add bun
-  asdf install   # .tool-versions に固定された bun を導入
+  asdf install   # .tool-versions に固定されたバージョンを導入
   ```
 
-- 動作確認済み: Node v25.6.0 / Bun 1.3.14
+  リポジトリ外では別の Node を使える(このマシンは `asdf set --home nodejs system` 設定済みで、リポジトリ外は OS / brew の node)
+- 動作確認済み: Node v24.16.0 / Bun 1.3.14
 - GitHub CLI(`gh`)があると Actions の確認やリポジトリ操作が楽
 - 動作検証ブラウザ: PC は Windows 側の Firefox / Chrome、スマホは実機(GitHub Pages 経由)
 
