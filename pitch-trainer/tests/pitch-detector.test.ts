@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { PITCH } from '../src/config'
 import { freqOf, midiOf } from '../src/audio/notes'
 import { detectPitch } from '../src/audio/pitch-detector'
 
@@ -59,9 +60,18 @@ describe('detectPitch (YIN) 回帰テスト', () => {
   })
 
   it('RMS ゲート未満の微小信号は棄却する', () => {
+    // 振幅 = ゲート値のサイン波 → RMS はゲートの 1/√2 でゲート未満
     const buf = new Float32Array(N)
-    for (let i = 0; i < N; i++) buf[i] = 0.01 * Math.sin((2 * Math.PI * 220 * i) / SR)
+    for (let i = 0; i < N; i++) buf[i] = PITCH.RMS_GATE * Math.sin((2 * Math.PI * 220 * i) / SR)
     expect(detectPitch(buf, SR)).toBe(-1)
+  })
+
+  it('ゲートを少し超える小さな声でも検出できる(感度)', () => {
+    const amp = PITCH.RMS_GATE * 3 // RMS ≒ ゲートの2.1倍
+    const buf = new Float32Array(N)
+    for (let i = 0; i < N; i++) buf[i] = amp * Math.sin((2 * Math.PI * 220 * i) / SR)
+    const got = detectPitch(buf, SR)
+    expect(Math.abs((midiOf(got) - 57) * 100)).toBeLessThanOrEqual(2) // A3
   })
 
   it('純音(サイン波)も検出できる', () => {
