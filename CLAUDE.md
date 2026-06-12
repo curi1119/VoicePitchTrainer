@@ -17,15 +17,16 @@
 
 ## 技術スタック(2026-06 確定)
 
-React 19 + TypeScript (strict) + Vite / Tailwind CSS v4 / ESLint + Prettier (+ prettier-plugin-tailwindcss) / Vitest / npm / Node 24 LTS(CI)
+React 19 + TypeScript (strict) + Vite / Tailwind CSS v4 / ESLint + Prettier (+ prettier-plugin-tailwindcss) / Vitest / Bun(パッケージ管理・スクリプト実行。asdf で導入し、ルートの `.tool-versions` でバージョン固定)/ Node 24 LTS(Vite・Vitest の実行系)
 
 ## コマンド(pitch-trainer/ 内で実行)
 
-- `npm run dev` — 開発サーバ
-- `npm run dev:https` — HTTPS 開発サーバ(スマホ実機のマイク検証用。getUserMedia は HTTPS 必須)
-- `npm test` — Vitest
-- `npm run build` — 型チェック+ビルド
-- `npm run lint` / `npm run format` — ESLint / Prettier
+- `bun install` — 依存の導入
+- `bun run dev` — 開発サーバ
+- `bun run dev:https` — HTTPS 開発サーバ(スマホ実機のマイク検証用。getUserMedia は HTTPS 必須)
+- `bun run test` — Vitest(**`bun test` は不可**。Bun 内蔵ランナーが起動して Vitest が動かない)
+- `bun run build` — 型チェック+ビルド
+- `bun run lint` / `bun run format` — ESLint / Prettier
 
 ## デプロイ
 

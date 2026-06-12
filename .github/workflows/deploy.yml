@@ -29,14 +29,18 @@ jobs:
         with:
           node-version: 24
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .tool-versions
+
       # pitch-trainer/(React版)があればビルド、まだ無ければ準備中ページを置く
       - name: Build app
         run: |
           mkdir -p _site
           if [ -f pitch-trainer/package.json ]; then
             cd pitch-trainer
-            npm ci
-            npm run build -- --base="/${GITHUB_REPOSITORY#*/}/"
+            bun install --frozen-lockfile
+            bun run build -- --base="/${GITHUB_REPOSITORY#*/}/"
             cd ..
             cp -r pitch-trainer/dist/. _site/
           else

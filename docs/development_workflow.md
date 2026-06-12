@@ -5,7 +5,7 @@
 ## 基本サイクル
 
 1. 変更する(仕様の正は `prototype/` と `HANDOVER.md`。React 版で挙動を変えない)
-2. `npm test` と `npm run lint` を通す
+2. `bun run test` と `bun run lint` を通す
 3. main へ commit & push(大きめの変更はブランチ + PR でもよい)
 4. GitHub Actions が自動で GitHub Pages へデプロイ(1〜2分)
 5. PC ブラウザ + 必要に応じてスマホ実機(Pages の URL)で確認

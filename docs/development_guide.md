@@ -5,8 +5,15 @@
 ## 前提
 
 - WSL2(Ubuntu 等)上で開発し、Git で管理
-- Node.js 22.12 以上(推奨: 24 LTS。CI は 24 を使用)。npm 同梱
-  - 動作確認済み: Node v25.6.0 / npm 11.8.0
+- Node.js 22.12 以上(Vite・Vitest の実行系。CI は 24 LTS を使用)
+- **Bun**(パッケージ管理・スクリプト実行)。asdf で導入し、バージョンはリポジトリ直下の `.tool-versions` に従う:
+
+  ```bash
+  asdf plugin add bun
+  asdf install   # .tool-versions に固定された bun を導入
+  ```
+
+- 動作確認済み: Node v25.6.0 / Bun 1.3.14
 - GitHub CLI(`gh`)があると Actions の確認やリポジトリ操作が楽
 - 動作検証ブラウザ: PC は Windows 側の Firefox / Chrome、スマホは実機(GitHub Pages 経由)
 
@@ -15,13 +22,13 @@
 ```bash
 git clone git@github.com:curi1119/VoicePitchTrainer.git
 cd VoicePitchTrainer/pitch-trainer
-npm ci
+bun install
 ```
 
 ## 開発サーバ
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 - WSL2 でも `http://localhost:5173` を Windows 側ブラウザでそのまま開ける(localhost 転送)
@@ -32,17 +39,19 @@ npm run dev
 getUserMedia(マイク)は **HTTPS 必須**のため、`http://192.168.x.x:5173` ではスマホのマイクが動きません。方法は2つ:
 
 1. **GitHub Pages で確認(推奨)**: main へ push → 自動デプロイ(1〜2分)→ スマホで <https://curi1119.github.io/VoicePitchTrainer/> を開く
-2. **LAN + HTTPS**: `npm run dev:https`(`@vitejs/plugin-basic-ssl` の自己署名証明書)で起動し、スマホから `https://<開発機のIP>:5173` へ。証明書警告は「続行」する。WSL2 の場合は Windows 側へのポートプロキシ設定(`netsh interface portproxy`)が必要になることがある
+2. **LAN + HTTPS**: `bun run dev:https`(`@vitejs/plugin-basic-ssl` の自己署名証明書)で起動し、スマホから `https://<開発機のIP>:5173` へ。証明書警告は「続行」する。WSL2 の場合は Windows 側へのポートプロキシ設定(`netsh interface portproxy`)が必要になることがある
 
 ## テスト・lint・ビルド
 
 ```bash
-npm test          # Vitest(YIN 回帰テストなど)
-npm run lint      # ESLint
-npm run format    # Prettier --write
-npm run build     # 型チェック + vite build → dist/
-npm run preview   # ビルド結果をローカル配信
+bun run test      # Vitest(YIN 回帰テストなど)
+bun run lint      # ESLint
+bun run format    # Prettier --write
+bun run build     # 型チェック + vite build → dist/
+bun run preview   # ビルド結果をローカル配信
 ```
+
+> **注意**: テストは必ず `bun run test`。`bun test` と打つと Bun 内蔵のテストランナーが起動してしまい、Vitest が動かない。
 
 ## トラブルシュート
 
