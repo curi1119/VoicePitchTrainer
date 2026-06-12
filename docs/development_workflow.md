@@ -6,9 +6,10 @@
 
 1. 変更する(仕様の正は `prototype/` と `HANDOVER.md`。React 版で挙動を変えない)
 2. `bun run test` と `bun run lint` を通す
-3. main へ commit & push(大きめの変更はブランチ + PR でもよい)
-4. GitHub Actions が自動で GitHub Pages へデプロイ(1〜2分)
-5. PC ブラウザ + 必要に応じてスマホ実機(Pages の URL)で確認
+3. **`bun run dev` を起動してローカルで動作確認する(push はこの確認が済んでから)**
+4. main へ commit & push(大きめの変更はブランチ + PR でもよい)
+5. GitHub Actions が自動で GitHub Pages へデプロイ(1〜2分)
+6. 必要に応じてスマホ実機(Pages の URL)で確認
 
 ## コミット
 

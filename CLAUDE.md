@@ -14,6 +14,7 @@
 - バランス調整値(判定時間・閾値など)は `pitch-trainer/src/config.ts` に集約し、独断で変更しない(調整の経緯は HANDOVER.md §5)。変更したら docs/architecture.md の調整値表も同じコミットで更新
 - `src/audio/` と `src/modes/` は React 非依存の純粋 TypeScript に保つ(Vitest の対象)
 - YIN 検出器の合成信号回帰テスト(HANDOVER.md §4.2)は常にパスさせる
+- **push の前に必ず開発者のローカル確認を取る**(commit までは可)。実装が終わったら `bun run dev` を起動して URL を案内し、OK をもらってから push する
 
 ## 技術スタック(2026-06 確定)
 
