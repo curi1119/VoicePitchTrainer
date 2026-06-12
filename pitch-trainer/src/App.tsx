@@ -28,10 +28,11 @@ import { ScalePane, type Chip } from './components/ScalePane'
 import { SinglePane, type PresetKey } from './components/SinglePane'
 import { Button, Card } from './components/ui'
 
-type Mode = 'tuner' | 'single' | 'scale'
+type Mode = 'tuner' | 'keyboard' | 'single' | 'scale'
 
 const TABS: ReadonlyArray<readonly [Mode, string]> = [
   ['tuner', 'チューナー'],
+  ['keyboard', '鍵盤'],
   ['single', '単音発声'],
   ['scale', '音階練習'],
 ]
@@ -382,14 +383,40 @@ export default function App() {
         ))}
       </div>
 
-      <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
-        <PitchGraph
-          ref={graphRef}
-          className="min-h-[180px] w-full flex-1"
-          onPlayNote={(m) => playTone(m, timbre)}
-        />
-        <JudgeBar ref={judgeRef} />
-      </div>
+      {mode !== 'keyboard' && (
+        <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
+          <PitchGraph
+            ref={graphRef}
+            className="min-h-[180px] w-full flex-1"
+            onPlayNote={(m) => playTone(m, timbre)}
+          />
+          <JudgeBar ref={judgeRef} />
+        </div>
+      )}
+
+      {/* 鍵盤モード: 88鍵のみを画面いっぱいに表示(スマホは縦置き=低音が下) */}
+      {mode === 'keyboard' && (
+        <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
+          <div className="min-h-0 flex-1 md:hidden">
+            <Piano
+              vertical
+              thickness={40}
+              sung={sung}
+              target={target}
+              onPlay={(m) => playTone(m, timbre)}
+            />
+          </div>
+          <div className="hidden min-h-0 flex-1 md:block">
+            <Piano
+              thickness={30}
+              length="fill"
+              sung={sung}
+              target={target}
+              onPlay={(m) => playTone(m, timbre)}
+            />
+          </div>
+        </div>
+      )}
 
       {mode === 'tuner' && (
         <Card className="p-2.5">
@@ -433,8 +460,8 @@ export default function App() {
         />
       )}
 
-      {/* 88鍵: スマホは折りたたみ、md 以上は常時表示 */}
-      <details className="md:hidden">
+      {/* 88鍵: スマホは折りたたみ、md 以上は常時表示(鍵盤モード中は非表示) */}
+      <details className={mode === 'keyboard' ? 'hidden' : 'md:hidden'}>
         <summary className="border-line bg-panel text-ink-dim cursor-pointer rounded-lg border px-3 py-2 text-xs select-none">
           🎹 88鍵キーボードを表示
         </summary>
@@ -442,7 +469,7 @@ export default function App() {
           <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} />
         </div>
       </details>
-      <div className="hidden md:block">
+      <div className={mode === 'keyboard' ? 'hidden' : 'hidden md:block'}>
         <Card title="Keyboard — A0 ~ C8 (88 keys)">
           <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} />
         </Card>

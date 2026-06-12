@@ -5,10 +5,13 @@ import { isBlackKey, noteName, noteOct } from '../audio/notes'
 interface KeyDef {
   midi: number
   black: boolean
-  left: number
+  /** 白鍵単位のオフセット(白鍵 = 整数、黒鍵 = 境界をまたぐ小数) */
+  pos: number
   /** C の白鍵のみオクターブラベルを付ける */
   label?: string
 }
+
+const BLACK_RATIO = PIANO.BLACK_W / PIANO.WHITE_W
 
 const KEYS: KeyDef[] = (() => {
   const keys: KeyDef[] = []
@@ -18,17 +21,22 @@ const KEYS: KeyDef[] = (() => {
       keys.push({
         midi: m,
         black: false,
-        left: whiteCount * PIANO.WHITE_W,
+        pos: whiteCount,
         label: noteName(m) === 'C' ? `C${noteOct(m)}` : undefined,
       })
       whiteCount++
     } else {
-      keys.push({ midi: m, black: true, left: whiteCount * PIANO.WHITE_W - PIANO.BLACK_W / 2 })
+      keys.push({ midi: m, black: true, pos: whiteCount - BLACK_RATIO / 2 })
     }
   }
   return keys
 })()
-const TOTAL_W = KEYS.filter((k) => !k.black).length * PIANO.WHITE_W
+const WHITE_COUNT = KEYS.filter((k) => !k.black).length
+/** C4 の白鍵オフセット(初期スクロールの中心) */
+const C4_POS = KEYS.find((k) => k.midi === 60)!.pos
+
+/** タップ後に押下表示を残す時間 ms(素早いタップでも「押した感」が見えるように) */
+const PRESS_MS = 180
 
 interface PianoProps {
   /** 検出中の音(青ハイライト) */
@@ -36,30 +44,48 @@ interface PianoProps {
   /** 目標音(オレンジ枠) */
   target: number | null
   onPlay(midi: number): void
+  /** 縦置き(スマホの鍵盤モード用)。低音が下・鍵は横いっぱいに伸びる */
+  vertical?: boolean
+  /** 白鍵の太さ px(横置き=鍵の幅 / 縦置き=鍵の高さ) */
+  thickness?: number
+  /** 鍵の長さ。横置きのみ有効('fill' は親の高さいっぱい) */
+  length?: number | 'fill'
 }
 
-/** タップ後に押下表示を残す時間 ms(素早いタップでも「押した感」が見えるように) */
-const PRESS_MS = 180
-
-export function Piano({ sung, target, onPlay }: PianoProps) {
+export function Piano({
+  sung,
+  target,
+  onPlay,
+  vertical = false,
+  thickness = PIANO.WHITE_W,
+  length = 120,
+}: PianoProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const keyEls = useRef(new Map<number, HTMLDivElement>())
   const [pressed, setPressed] = useState<ReadonlySet<number>>(() => new Set())
   const timersRef = useRef(new Set<ReturnType<typeof setTimeout>>())
 
+  const blackThick = thickness * BLACK_RATIO
+  const totalPx = WHITE_COUNT * thickness
+
   // 初期表示は中央(C4付近)へスクロール
   useEffect(() => {
     const el = scrollRef.current
-    if (el) el.scrollLeft = 23 * PIANO.WHITE_W - 200
-  }, [])
+    if (!el) return
+    const c4 = C4_POS * thickness
+    if (vertical) el.scrollTop = Math.max(0, totalPx - c4 - el.clientHeight / 2)
+    else el.scrollLeft = Math.max(0, c4 - el.clientWidth / 2)
+  }, [vertical, thickness, totalPx])
 
   // 目標音が変わったら見える位置へスクロール
   useEffect(() => {
     if (target == null) return
-    keyEls.current
-      .get(target)
-      ?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
-  }, [target])
+    keyEls.current.get(target)?.scrollIntoView({
+      inline: vertical ? 'nearest' : 'center',
+      block: vertical ? 'center' : 'nearest',
+      behavior: 'smooth',
+    })
+  }, [target, vertical])
 
   // アンマウント時に押下表示のタイマーを掃除
   useEffect(() => {
@@ -82,8 +108,18 @@ export function Piano({ sung, target, onPlay }: PianoProps) {
   }
 
   return (
-    <div ref={scrollRef} className="overflow-x-auto pb-1.5">
-      <div className="relative h-[120px] select-none" style={{ width: TOTAL_W }}>
+    <div
+      ref={scrollRef}
+      className={vertical ? 'h-full overflow-y-auto' : 'h-full overflow-x-auto pb-1.5'}
+    >
+      <div
+        className="relative select-none"
+        style={
+          vertical
+            ? { height: totalPx, width: '100%' }
+            : { width: totalPx, height: length === 'fill' ? '100%' : length, minHeight: 80 }
+        }
+      >
         {KEYS.map((k) => {
           const isSung = sung === k.midi
           const isPressed = pressed.has(k.midi)
@@ -98,9 +134,28 @@ export function Piano({ sung, target, onPlay }: PianoProps) {
               : isSung
                 ? 'bg-blue'
                 : 'bg-[#f2f0ea] hover:bg-white'
+          const thick = k.black ? blackThick : thickness
+          const posPx = k.pos * thickness
           const cls = k.black
-            ? `absolute top-0 z-[2] h-[74px] w-[15px] cursor-pointer rounded-b-[3px] border border-black transition-[background-color,transform] duration-100 ${bg}`
-            : `absolute top-0 h-[120px] w-[25px] cursor-pointer rounded-b border border-[#2c3742] transition-[background-color,transform] duration-100 ${bg}`
+            ? `absolute z-[2] cursor-pointer border border-black transition-[background-color,transform] duration-100 ${
+                vertical ? 'rounded-r-[3px]' : 'rounded-b-[3px]'
+              } ${bg}`
+            : `absolute cursor-pointer border border-[#2c3742] transition-[background-color,transform] duration-100 ${
+                vertical ? 'rounded-r' : 'rounded-b'
+              } ${bg}`
+          const geom = vertical
+            ? {
+                top: totalPx - posPx - thick,
+                left: 0,
+                height: thick,
+                width: k.black ? '62%' : '100%',
+              }
+            : {
+                left: posPx,
+                top: 0,
+                width: thick,
+                height: k.black ? '62%' : '100%',
+              }
           return (
             <div
               key={k.midi}
@@ -110,9 +165,14 @@ export function Piano({ sung, target, onPlay }: PianoProps) {
               }}
               className={cls}
               style={{
-                left: k.left,
+                ...geom,
                 WebkitTapHighlightColor: 'transparent',
-                ...(isPressed ? { transform: 'translateY(2px) scaleY(0.98)' } : {}),
+                ...(isPressed
+                  ? {
+                      transform: vertical ? 'scaleX(0.98)' : 'translateY(2px) scaleY(0.98)',
+                      transformOrigin: 'left center',
+                    }
+                  : {}),
                 ...(target === k.midi
                   ? { outline: '3px solid var(--color-amber)', outlineOffset: '-3px' }
                   : {}),
@@ -120,7 +180,13 @@ export function Piano({ sung, target, onPlay }: PianoProps) {
               onPointerDown={() => press(k.midi)}
             >
               {k.label != null && (
-                <span className="pointer-events-none absolute bottom-[3px] w-full text-center font-mono text-[8px] text-[#6a737d]">
+                <span
+                  className={
+                    vertical
+                      ? 'pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 font-mono text-[10px] text-[#6a737d]'
+                      : 'pointer-events-none absolute bottom-[3px] w-full text-center font-mono text-[8px] text-[#6a737d]'
+                  }
+                >
                   {k.label}
                 </span>
               )}
