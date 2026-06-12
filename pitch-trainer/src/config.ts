@@ -44,10 +44,8 @@ export const SMOOTHING = {
   SILENT_FRAMES: 8,
 } as const
 
-/** メーター表示 */
+/** 数値表示 */
 export const METER = {
-  /** 針の lerp 係数(アナログメーター風のゆったり追従) */
-  NEEDLE_LERP: 0.1,
   /** 数値テキストの更新間隔 ms(10Hz。チラつき防止) */
   TEXT_UPDATE_MS: 100,
 } as const
@@ -119,6 +117,23 @@ export const SCALE = {
   MAX_TOP_MIDI: 96,
   /** これを超えるラウンドには進まない */
   MAX_ROUNDS: 24,
+} as const
+
+/** ピッチグラフ(時間×音高) */
+export const GRAPH = {
+  /** 横軸の表示窓(秒)。右端が現在 */
+  WINDOW_SEC: 6,
+  /** 表示レンジ追従の lerp 係数(毎フレーム) */
+  RANGE_LERP: 0.08,
+  /** 縦軸の最小表示スパン(半音) */
+  MIN_SPAN: 14,
+  /** データ(声・ターゲット帯)に対する上下の余白(半音) */
+  PAD: 3,
+  /** 初期表示レンジ (MIDI)。カスタム出題範囲 C3〜C5 を含む */
+  INIT_LOW: 46,
+  INIT_HIGH: 74,
+  /** 左端ミニ鍵盤の幅 px(タップターゲット) */
+  KEYBOARD_W: 44,
 } as const
 
 /** ピアノ鍵盤 (A0〜C8, 88鍵) */

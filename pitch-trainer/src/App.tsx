@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { METER, PIANO, SCALE, SINGLE } from './config'
+import { PIANO, SCALE, SINGLE } from './config'
+import { rmsOf } from './audio/level'
 import { openMic, type MicInput } from './audio/mic'
 import { noteFull } from './audio/notes'
 import { detectPitch } from './audio/pitch-detector'
@@ -19,11 +20,11 @@ import {
 } from './audio/sampled-piano'
 import { SingleMode } from './modes/single'
 import { ScaleMode, type PatternKey } from './modes/scale'
-import { Meter, type MeterHandle } from './components/Meter'
+import { JudgeBar, type JudgeBarHandle } from './components/JudgeBar'
 import { Piano } from './components/Piano'
+import { PitchGraph, type PitchGraphHandle } from './components/PitchGraph'
 import { ScalePane, type Chip } from './components/ScalePane'
 import { SinglePane, type PresetKey } from './components/SinglePane'
-import { WaveDisplay, type WaveHandle } from './components/WaveDisplay'
 import { Button, Card } from './components/ui'
 
 type Mode = 'tuner' | 'single' | 'scale'
@@ -40,9 +41,9 @@ export default function App() {
   const [timbre, setTimbre] = useState<Timbre>('sampled')
   const [sampledReady, setSampledReady] = useState(false)
   const [mode, setMode] = useState<Mode>('tuner')
-  /** 検出音(鍵盤の青ハイライト)。音名ヒステリシス通過後なので更新頻度は低い */
+  /** 検出音(88鍵の青ハイライト)。音名ヒステリシス通過後なので更新頻度は低い */
   const [sung, setSung] = useState<number | null>(null)
-  /** 目標音(鍵盤のオレンジ枠) */
+  /** 目標音(88鍵のオレンジ枠) */
   const [target, setTarget] = useState<number | null>(null)
   // 単音発声トレーニング
   const [preset, setPreset] = useState<PresetKey>('custom')
@@ -62,14 +63,13 @@ export default function App() {
   const [chips, setChips] = useState<Chip[]>([])
 
   // ---- 60Hz 系・メインループから参照するもの(ref。再レンダリングさせない)----
-  const meterRef = useRef<MeterHandle>(null)
-  const waveRef = useRef<WaveHandle>(null)
+  const graphRef = useRef<PitchGraphHandle>(null)
+  const judgeRef = useRef<JudgeBarHandle>(null)
   const micRef = useRef<MicInput | null>(null)
   const trackerRef = useRef(new PitchTracker())
   const singleRef = useRef(new SingleMode())
   const modeRef = useRef<Mode>('tuner')
   const targetRef = useRef<number | null>(null)
-  const lastTextRef = useRef(0)
 
   // ScaleMode が常に最新の設定値を読めるようにする(プロトタイプが毎回 DOM を読む挙動の踏襲)
   const latest = useRef({ timbre, patternKey, bpm, guideOn })
@@ -137,40 +137,54 @@ export default function App() {
       raf = requestAnimationFrame(loop)
 
       let raw = -1
+      let rms = 0
       const mic = micRef.current
       if (mic) {
         const buf = mic.read()
-        waveRef.current?.draw(buf)
         raw = detectPitch(buf, mic.sampleRate)
+        rms = rmsOf(buf)
       }
       const frame = trackerRef.current.update(raw)
 
+      // グラフのターゲット帯(モードに応じて中心と幅を決める)
+      let gTarget: number | null = null
+      let gTol: number = SINGLE.OK_CENTS
+      const ss = singleRef.current.state
+      if (modeRef.current === 'single' && ss.target != null && !ss.solved) {
+        gTarget = ss.target
+      } else if (
+        modeRef.current === 'scale' &&
+        scaleRef.current?.running &&
+        targetRef.current != null
+      ) {
+        gTarget = targetRef.current
+        gTol = SCALE.TOLERANCE_CENTS
+      }
+
+      // セント表示: ターゲットがあればターゲット比、なければ表示中の音名比
+      let cents: number | null = null
       if (frame.midi != null && frame.note != null) {
-        const nearest = frame.note
-        // メーター基準: ターゲットがあればターゲット比、なければ表示中の音名比
-        let refMidi = nearest
-        const ss = singleRef.current.state
-        if (modeRef.current === 'single' && ss.target != null && !ss.solved) refMidi = ss.target
-        if (modeRef.current === 'scale' && scaleRef.current?.running && targetRef.current != null)
-          refMidi = targetRef.current
-        const cents = (frame.midi - refMidi) * 100
-        meterRef.current?.setNeedle(cents, true)
-        setSung(nearest >= PIANO.MIDI_MIN && nearest <= PIANO.MIDI_MAX ? nearest : null)
-        if (now - lastTextRef.current > METER.TEXT_UPDATE_MS) {
-          lastTextRef.current = now
-          meterRef.current?.setReadout(nearest, frame.midi, cents)
-        }
+        cents = (frame.midi - (gTarget ?? frame.note)) * 100
+        setSung(frame.note >= PIANO.MIDI_MIN && frame.note <= PIANO.MIDI_MAX ? frame.note : null)
       } else if (frame.cleared) {
-        meterRef.current?.clearReadout()
-        meterRef.current?.setNeedle(0, false)
         setSung(null)
       }
+
+      graphRef.current?.pushFrame({
+        now,
+        midi: frame.midi,
+        note: frame.note,
+        cents,
+        target: gTarget,
+        toleranceCents: gTol,
+        rms,
+      })
 
       // 単音発声の判定(非表示中も時刻だけは進める)
       const res = singleRef.current.frame(frame.midi, now, modeRef.current === 'single')
       if (res) {
-        meterRef.current?.setMsg(res.msg.text, res.msg.cls)
-        if (res.holdRatio != null) meterRef.current?.setHold(res.holdRatio)
+        judgeRef.current?.setMsg(res.msg.text, res.msg.cls)
+        if (res.holdRatio != null) judgeRef.current?.setHold(res.holdRatio)
         if (res.sound === 'success') playSuccess()
         if (res.sound === 'fail') playFail()
         if (res.finished) {
@@ -212,9 +226,9 @@ export default function App() {
       singleRef.current.abandon()
       targetRef.current = null
       setTarget(null)
-      meterRef.current?.setMsg('', '')
+      judgeRef.current?.setMsg('', '')
       setQuizDisabled(false)
-      meterRef.current?.setHold(0)
+      judgeRef.current?.setHold(0)
     }
   }
 
@@ -254,8 +268,8 @@ export default function App() {
     setPassDisabled(false)
     targetRef.current = null
     setTarget(null) // 答えは隠す
-    meterRef.current?.setHold(0)
-    meterRef.current?.setMsg('この音を発声してください…', '')
+    judgeRef.current?.setHold(0)
+    judgeRef.current?.setMsg('この音を発声してください…', '')
     playTone(t, timbre, SINGLE.QUIZ_TONE_DUR)
   }
 
@@ -272,10 +286,10 @@ export default function App() {
     if (t == null || !singleRef.current.pass()) return
     targetRef.current = t
     setTarget(t)
-    meterRef.current?.setMsg(`答えは ${noteFull(t)} でした`, 'ng')
+    judgeRef.current?.setMsg(`答えは ${noteFull(t)} でした`, 'ng')
     setPassDisabled(true)
     setQuizDisabled(false)
-    meterRef.current?.setHold(0)
+    judgeRef.current?.setHold(0)
   }
 
   function handleScaleStart() {
@@ -341,9 +355,13 @@ export default function App() {
         </div>
       </header>
 
-      <Card title="Pitch Meter">
-        <Meter ref={meterRef} />
-        <WaveDisplay ref={waveRef} />
+      <Card>
+        <PitchGraph
+          ref={graphRef}
+          className="h-[42dvh] min-h-[280px]"
+          onPlayNote={(m) => playTone(m, timbre)}
+        />
+        <JudgeBar ref={judgeRef} />
       </Card>
 
       <div className="mb-3.5 flex flex-wrap gap-1.5">
@@ -363,7 +381,7 @@ export default function App() {
       {mode === 'tuner' && (
         <Card title="チューナー(自由練習)">
           <p className="text-ink-dim mt-2 text-xs">
-            マイクを開始して声を出すと、検出した音程がメーターと鍵盤に表示されます。鍵盤をクリックすると参照音が鳴ります。
+            マイクを開始して声を出すと、検出した音程がグラフに軌跡として表示されます。グラフ左の鍵盤や下の88鍵をクリックすると参照音が鳴ります。
           </p>
         </Card>
       )}
