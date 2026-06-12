@@ -1,18 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { PIANO, SCALE, SINGLE } from './config'
+import { PIANO, SCALE, SINGLE, SYNTH } from './config'
 import { rmsOf } from './audio/level'
 import { describeMicError, openMic, type MicErrorInfo, type MicInput } from './audio/mic'
 import { noteFull } from './audio/notes'
 import { detectPitch } from './audio/pitch-detector'
 import { PitchTracker } from './audio/smoothing'
-import {
-  audioContext,
-  playFail,
-  playSuccess,
-  playTone,
-  playTriad,
-  type Timbre,
-} from './audio/synth'
+import { audioContext, setMasterVolume } from './audio/output'
+import { playFail, playSuccess, playTone, playTriad, type Timbre } from './audio/synth'
 import {
   hasSampledPianoCache,
   loadSampledPiano,
@@ -43,6 +37,12 @@ export default function App() {
   /** マイク取得失敗の内容(日本語ガイドのモーダル表示用) */
   const [micError, setMicError] = useState<MicErrorInfo | null>(null)
   const [timbre, setTimbre] = useState<Timbre>('sampled')
+  /** マスター音量 0..1(localStorage に保存) */
+  const [volume, setVolume] = useState<number>(() => {
+    const raw = localStorage.getItem('master-volume')
+    const saved = raw == null ? NaN : Number(raw)
+    return Number.isFinite(saved) ? Math.min(1, Math.max(0, saved)) : SYNTH.MASTER_VOLUME_DEFAULT
+  })
   const [sampledReady, setSampledReady] = useState(false)
   const [mode, setMode] = useState<Mode>('tuner')
   /** 検出音(88鍵の青ハイライト)。音名ヒステリシス通過後なので更新頻度は低い */
@@ -74,6 +74,11 @@ export default function App() {
   const singleRef = useRef(new SingleMode())
   const modeRef = useRef<Mode>('tuner')
   const targetRef = useRef<number | null>(null)
+
+  // マスター音量を反映(初回 + つまみ操作時)
+  useEffect(() => {
+    setMasterVolume(volume)
+  }, [volume])
 
   // ScaleMode が常に最新の設定値を読めるようにする(プロトタイプが毎回 DOM を読む挙動の踏襲)
   const latest = useRef({ timbre, patternKey, bpm, guideOn })
@@ -345,26 +350,51 @@ export default function App() {
           onClose={() => setMicError(null)}
         />
       )}
-      <header className="flex items-center justify-between gap-2">
-        <h1 className="text-base font-semibold tracking-[0.08em] whitespace-nowrap">
+      <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <h1 className="text-sm font-semibold tracking-[0.08em] whitespace-nowrap sm:text-base">
           PITCH TRAINER
           <span className="text-ink-dim ml-2 hidden text-xs font-normal sm:inline">
             発声音程トレーナー
           </span>
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="flex items-center gap-1">
+            <span aria-hidden className="text-xs">
+              🔊
+            </span>
+            <input
+              aria-label="音量"
+              type="range"
+              className="ctl w-12 sm:w-24"
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              onChange={(e) => {
+                const v = Number(e.target.value)
+                setVolume(v)
+                localStorage.setItem('master-volume', String(v))
+              }}
+            />
+          </span>
           <select
             aria-label="音色"
             className="ctl"
             value={timbre}
             onChange={(e) => setTimbre(e.target.value as Timbre)}
           >
-            <option value="sampled">{sampledReady ? 'ピアノ' : 'ピアノ(準備中…)'}</option>
+            <option value="sampled">{sampledReady ? 'ピアノ' : 'ピアノ(読込中)'}</option>
             <option value="piano">ピアノ(合成)</option>
             <option value="beep">ビープ音</option>
           </select>
           <Button primary onClick={handleMic} disabled={micOn}>
-            {micOn ? '🎤 動作中' : '🎤 マイク開始'}
+            {micOn ? (
+              '🎤 動作中'
+            ) : (
+              <>
+                🎤 <span className="hidden sm:inline">マイク</span>開始
+              </>
+            )}
           </Button>
         </div>
       </header>

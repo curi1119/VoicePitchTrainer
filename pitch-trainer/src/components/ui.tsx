@@ -7,7 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export function Button({ primary = false, small = false, className = '', ...rest }: ButtonProps) {
   const cls = [
-    'cursor-pointer rounded-lg border disabled:cursor-default disabled:opacity-40',
+    'cursor-pointer rounded-lg border whitespace-nowrap disabled:cursor-default disabled:opacity-40',
     small ? 'px-2.5 py-[5px] text-xs' : 'px-3.5 py-2 text-sm',
     primary
       ? 'border-amber bg-amber font-semibold text-[#1a1410]'

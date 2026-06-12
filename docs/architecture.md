@@ -57,6 +57,7 @@ pitch-trainer/
 │  │  ├─ sampled-piano.ts    # サンプルピアノ (smplr + SplendidGrandPiano) のロードと再生
 │  │  ├─ mic.ts              # getUserMedia + ローパス + AnalyserNode
 │  │  ├─ level.ts            # 入力レベル (RMS)
+│  │  ├─ output.ts           # AudioContext とマスター音量(全出力の経由点)
 │  │  └─ notes.ts            # MIDI ↔ 周波数 ↔ 音名 の変換ユーティリティ
 │  ├─ modes/        # 判定ロジック。純粋 TS(テスト対象)
 │  │  ├─ single.ts           # 単音発声: キープ/不正解/リトライの状態機械
@@ -113,6 +114,7 @@ pitch-trainer/
 | `SAMPLED_VOLUME` | 127 | サンプルピアノの音量 0-127(初期値100ではスマホで音量不足 → 最大化) |
 | `SAMPLED_VELOCITY` | 108 | サンプルピアノのベロシティ 0-127(音色の明るさにも影響。90→108) |
 | `SAMPLED_BOOST` | 1.6 | 追加ブースト倍率。コンプレッサー経由で音割れを防止(2026-06-13 スマホ音量対策) |
+| `MASTER_VOLUME_DEFAULT` | 1 | マスター音量の初期値。ヘッダーのつまみで変更でき localStorage(`master-volume`)に保存 |
 
 調整の経緯(なぜこの値か)は HANDOVER.md §5。**値を変えたらこの表と経緯を更新する。**
 

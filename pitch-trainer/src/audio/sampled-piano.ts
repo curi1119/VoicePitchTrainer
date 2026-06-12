@@ -1,5 +1,6 @@
 import { CacheStorage, SplendidGrandPiano } from 'smplr'
 import { SYNTH } from '../config'
+import { masterOut } from './output'
 
 /**
  * サンプルピアノ音源 (smplr + SplendidGrandPiano)。
@@ -42,7 +43,7 @@ export function loadSampledPiano(
     // スマホのスピーカーでも十分な音量になるよう、ブースト → コンプレッサー(音割れ防止)
     // を経由して出力する
     const compressor = ctx.createDynamicsCompressor()
-    compressor.connect(ctx.destination)
+    compressor.connect(masterOut())
     const boost = ctx.createGain()
     boost.gain.value = SYNTH.SAMPLED_BOOST
     boost.connect(compressor)
