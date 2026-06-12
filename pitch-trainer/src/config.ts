@@ -1,6 +1,6 @@
 /**
  * バランス調整値の集約。
- * 値の決定経緯は HANDOVER.md §5 / docs/architecture.md の表を参照。
+ * 値の決定経緯は docs/architecture.md の調整値表・調整履歴を参照。
  * ここを変更したら docs/architecture.md の調整値表も同じコミットで更新すること。
  */
 

@@ -42,7 +42,6 @@
 | `prototype/` | 単一 HTML のプロトタイプ。**現時点の仕様と調整値の「正」** |
 | `pitch-trainer/` | React + TypeScript + Vite の本体(下記レイヤ構成) |
 | `docs/` | 開発ドキュメント |
-| `HANDOVER.md` | 企画フェーズからの引継書。仕様・調整値の決定経緯 |
 | `.github/workflows/deploy.yml` | GitHub Pages 自動デプロイ |
 
 ## レイヤ構成(設計原則)
@@ -119,6 +118,8 @@ pitch-trainer/
 **値を変えたらこの表と下の調整履歴を更新する。**
 
 ## 調整履歴(なぜこの値か)
+
+> 企画フェーズの引継書 HANDOVER.md は内容を本書へ移管のうえ 2026-06-13 に削除した(git 履歴で参照可能)。
 
 | 項目 | 経緯 |
 |---|---|
