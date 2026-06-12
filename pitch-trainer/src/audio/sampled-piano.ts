@@ -15,6 +15,16 @@ export interface SampledPianoProgress {
   total: number
 }
 
+const CACHE_NAME = 'pitch-trainer-piano'
+
+/**
+ * サンプルが既に永続キャッシュされているか(= 2回目以降の訪問か)。
+ * キャッシュがあってもデコードに1〜2秒かかるため、ロード画面を出すかの判断に使う。
+ */
+export async function hasSampledPianoCache(): Promise<boolean> {
+  return 'caches' in window && (await caches.has(CACHE_NAME))
+}
+
 let piano: SplendidGrandPiano | null = null
 let ready = false
 let loading: Promise<void> | null = null
@@ -31,7 +41,7 @@ export function loadSampledPiano(
   loading ??= (async () => {
     piano = new SplendidGrandPiano(ctx, {
       volume: SYNTH.SAMPLED_VOLUME,
-      ...('caches' in window ? { storage: new CacheStorage('pitch-trainer-piano') } : {}),
+      ...('caches' in window ? { storage: new CacheStorage(CACHE_NAME) } : {}),
       ...(onProgress ? { onLoadProgress: onProgress } : {}),
     })
     await piano.load

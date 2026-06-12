@@ -12,7 +12,11 @@ import {
   playTriad,
   type Timbre,
 } from './audio/synth'
-import { loadSampledPiano, type SampledPianoProgress } from './audio/sampled-piano'
+import {
+  hasSampledPianoCache,
+  loadSampledPiano,
+  type SampledPianoProgress,
+} from './audio/sampled-piano'
 import { SingleMode } from './modes/single'
 import { ScaleMode, type PatternKey } from './modes/scale'
 import { Meter, type MeterHandle } from './components/Meter'
@@ -75,25 +79,34 @@ export default function App() {
 
   // 起動直後にサンプルピアノのロードを開始する。AudioContext はサスペンド状態でも
   // サンプルのデコードは可能で、実際の再生開始(resume)は各操作ハンドラ内の audioContext() が行う。
-  // ロード中はロード画面を表示する(キャッシュ命中時の一瞬の点滅を避けるため 250ms 遅れて出す)
+  // ロード画面を出すのは未キャッシュ(=初回訪問)のときだけ。キャッシュ済みでもデコードに
+  // 1〜2秒かかるため、毎回ロード画面を出すと「キャッシュが効いていない」体験になってしまう
   const [loadProgress, setLoadProgress] = useState<SampledPianoProgress>({ loaded: 0, total: 0 })
   const [overlay, setOverlay] = useState(false)
   const [overlaySkippable, setOverlaySkippable] = useState(false)
   useEffect(() => {
-    const showTimer = setTimeout(() => setOverlay(true), 250)
-    const skipTimer = setTimeout(() => setOverlaySkippable(true), 5000)
-    const clear = () => {
-      clearTimeout(showTimer)
-      clearTimeout(skipTimer)
+    let cancelled = false
+    const timers: ReturnType<typeof setTimeout>[] = []
+    const clear = () => timers.forEach(clearTimeout)
+    void (async () => {
+      const cached = await hasSampledPianoCache()
+      if (!cached && !cancelled) {
+        // 描画直後の一瞬の点滅を避けるため 250ms 遅れて表示する
+        timers.push(setTimeout(() => setOverlay(true), 250))
+        timers.push(setTimeout(() => setOverlaySkippable(true), 5000))
+      }
+      loadSampledPiano(audioContext(), (p) => setLoadProgress({ ...p }))
+        .then(() => setSampledReady(true))
+        .catch((e) => console.warn('サンプルピアノのロードに失敗(合成ピアノで継続):', e))
+        .finally(() => {
+          clear()
+          setOverlay(false)
+        })
+    })()
+    return () => {
+      cancelled = true
+      clear()
     }
-    loadSampledPiano(audioContext(), (p) => setLoadProgress({ ...p }))
-      .then(() => setSampledReady(true))
-      .catch((e) => console.warn('サンプルピアノのロードに失敗(合成ピアノで継続):', e))
-      .finally(() => {
-        clear()
-        setOverlay(false)
-      })
-    return clear
   }, [])
 
   // インスタンスはマウント時に1度だけ生成する(コールバックはすべてイベント/タイマー文脈で呼ばれる)
