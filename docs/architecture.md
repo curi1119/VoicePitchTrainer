@@ -33,6 +33,16 @@
 | ピッチ検出 | YIN 法の自前実装 | 外部音声ライブラリ不使用(経緯: 自己相関法では男性低音で倍音誤検出 → YIN へ。HANDOVER.md §4.2) |
 | デプロイ | GitHub Actions → GitHub Pages | `.github/workflows/deploy.yml` |
 
+## リポジトリ構成
+
+| パス | 内容 |
+|---|---|
+| `prototype/` | 単一 HTML のプロトタイプ。**現時点の仕様と調整値の「正」** |
+| `pitch-trainer/` | React + TypeScript + Vite の本体(下記レイヤ構成) |
+| `docs/` | 開発ドキュメント |
+| `HANDOVER.md` | 企画フェーズからの引継書。仕様・調整値の決定経緯 |
+| `.github/workflows/deploy.yml` | GitHub Pages 自動デプロイ |
+
 ## レイヤ構成(設計原則)
 
 ```
