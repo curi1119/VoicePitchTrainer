@@ -51,10 +51,11 @@ export function VolumeControl({ volume, onChange }: VolumeControlProps) {
           🔊
         </button>
         {open && (
-          <span className="border-line bg-panel2 absolute top-full right-0 z-30 mt-1.5 flex items-center gap-2 rounded-lg border p-3 shadow-lg">
+          // 画面幅いっぱいの固定バー(ボタン基準の absolute だと画面左へはみ出すため)
+          <span className="border-line bg-panel2 fixed inset-x-2 top-12 z-30 flex items-center gap-3 rounded-lg border p-3 shadow-lg">
             {/* touch-none: ドラッグが画面スクロールに奪われないようにする */}
-            {slider('ctl w-44 touch-none')}
-            <span className="text-ink-dim w-10 text-right font-mono text-xs">
+            {slider('min-w-0 flex-1 touch-none accent-amber')}
+            <span className="text-ink-dim w-10 shrink-0 text-right font-mono text-xs">
               {Math.round(volume * 100)}%
             </span>
           </span>
@@ -65,7 +66,7 @@ export function VolumeControl({ volume, onChange }: VolumeControlProps) {
         <span aria-hidden className="text-xs">
           🔊
         </span>
-        {slider('ctl w-24 touch-none')}
+        {slider('w-24 touch-none accent-amber')}
       </span>
     </>
   )

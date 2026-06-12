@@ -69,7 +69,7 @@ export function ScalePane(p: ScalePaneProps) {
           <input
             aria-label="テンポ"
             type="range"
-            className="ctl w-24"
+            className="accent-amber w-24 touch-none"
             min={SCALE.BPM_MIN}
             max={SCALE.BPM_MAX}
             step={SCALE.BPM_STEP}
