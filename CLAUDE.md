@@ -4,16 +4,16 @@
 
 ## 仕様の「正」
 
-- `prototype/pitch-trainer-prototype.html`(動作確認済み)と `HANDOVER.md` が仕様・調整値の正
-- React 版(`pitch-trainer/`)への移植では**挙動・調整値を変えない**こと
+- **判定ロジックと調整値**(`config.ts`)はプロトタイプ(`prototype/`)由来の確定値。独断で変えない
+- **UI** は docs/ui_redesign.md 以降プロトタイプから独自に進化している(プロトタイプは判定挙動の比較用リファレンスであり、見た目はもう一致しない)
 
 ## 必ず守ること
 
 - 作業言語は日本語(ドキュメント・コミットメッセージ・UI 文言)
 - アセット(画像・音源)は開発者自身では制作しない。**ライセンス的に問題ないものの導入は可**。ピアノはサンプル音源(smplr + SplendidGrandPiano、パブリックドメイン)を使用中。合成ピアノはフォールバック兼比較用に残す
-- バランス調整値(判定時間・閾値など)は `pitch-trainer/src/config.ts` に集約し、独断で変更しない(調整の経緯は HANDOVER.md §5)。変更したら docs/architecture.md の調整値表も同じコミットで更新
+- バランス調整値(判定時間・閾値など)は `pitch-trainer/src/config.ts` に集約し、独断で変更しない。変更したら docs/architecture.md の調整値表・調整履歴も同じコミットで更新
 - `src/audio/` と `src/modes/` は React 非依存の純粋 TypeScript に保つ(Vitest の対象)
-- YIN 検出器の合成信号回帰テスト(HANDOVER.md §4.2)は常にパスさせる
+- YIN 検出器の合成信号回帰テスト(docs/architecture.md「テスト戦略」)は常にパスさせる
 - **push の前に必ず開発者のローカル確認を取る**(commit までは可)。実装が終わったら `bun run dev` を起動して URL を案内し、OK をもらってから push する
 
 ## 技術スタック(2026-06 確定)

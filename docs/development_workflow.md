@@ -4,7 +4,7 @@
 
 ## 基本サイクル
 
-1. 変更する(仕様の正は `prototype/` と `HANDOVER.md`。React 版で挙動を変えない)
+1. 変更する(判定ロジック・調整値を変える場合は docs/architecture.md の調整値表・調整履歴も同じコミットで更新)
 2. `bun run test` と `bun run lint` を通す
 3. **`bun run dev` を起動してローカルで動作確認する(push はこの確認が済んでから)**
 4. main へ commit & push(大きめの変更はブランチ + PR でもよい)
@@ -30,4 +30,4 @@
 
 ## プロトタイプとの比較確認
 
-挙動や見た目に迷ったら `prototype/pitch-trainer-prototype.html` をブラウザで直接開き、React 版と並べて比較する(プロトタイプが仕様の正)。意図的に挙動を変える場合は HANDOVER.md の該当箇所と docs/architecture.md を更新してから変える。
+判定の挙動に迷ったら `prototype/pitch-trainer-prototype.html` をブラウザで直接開いて比較できる(判定ロジックの原典。依存ゼロで単体動作)。UI は docs/ui_redesign.md 以降独自進化しているため、見た目はもう一致しない。
