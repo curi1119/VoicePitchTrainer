@@ -406,14 +406,17 @@ export default function App() {
               onPlay={(m) => playTone(m, timbre)}
             />
           </div>
-          <div className="hidden min-h-0 flex-1 md:block">
-            <Piano
-              thickness={30}
-              length="fill"
-              sung={sung}
-              target={target}
-              onPlay={(m) => playTone(m, timbre)}
-            />
+          {/* 鍵が間延びしないよう長さに上限を設け、縦方向は中央に置く */}
+          <div className="hidden min-h-0 flex-1 md:flex md:items-center">
+            <div className="h-full max-h-[260px] w-full">
+              <Piano
+                thickness={32}
+                length="fill"
+                sung={sung}
+                target={target}
+                onPlay={(m) => playTone(m, timbre)}
+              />
+            </div>
           </div>
         </div>
       )}
