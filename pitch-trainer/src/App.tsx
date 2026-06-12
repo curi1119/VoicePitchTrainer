@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PIANO, SCALE, SINGLE } from './config'
 import { rmsOf } from './audio/level'
-import { openMic, type MicInput } from './audio/mic'
+import { describeMicError, openMic, type MicErrorInfo, type MicInput } from './audio/mic'
 import { noteFull } from './audio/notes'
 import { detectPitch } from './audio/pitch-detector'
 import { PitchTracker } from './audio/smoothing'
@@ -21,6 +21,7 @@ import {
 import { SingleMode } from './modes/single'
 import { ScaleMode, type PatternKey } from './modes/scale'
 import { JudgeBar, type JudgeBarHandle } from './components/JudgeBar'
+import { MicHelp } from './components/MicHelp'
 import { Piano } from './components/Piano'
 import { PitchGraph, type PitchGraphHandle } from './components/PitchGraph'
 import { ScalePane, type Chip } from './components/ScalePane'
@@ -38,6 +39,8 @@ const TABS: ReadonlyArray<readonly [Mode, string]> = [
 export default function App() {
   // ---- 離散イベント系の state(再レンダリング対象)----
   const [micOn, setMicOn] = useState(false)
+  /** マイク取得失敗の内容(日本語ガイドのモーダル表示用) */
+  const [micError, setMicError] = useState<MicErrorInfo | null>(null)
   const [timbre, setTimbre] = useState<Timbre>('sampled')
   const [sampledReady, setSampledReady] = useState(false)
   const [mode, setMode] = useState<Mode>('tuner')
@@ -213,8 +216,9 @@ export default function App() {
     try {
       micRef.current = await openMic(audioContext())
       setMicOn(true)
+      setMicError(null)
     } catch (e) {
-      alert('マイクを取得できませんでした: ' + (e instanceof Error ? e.message : String(e)))
+      setMicError(describeMicError(e))
     }
   }
 
@@ -329,6 +333,16 @@ export default function App() {
             </Button>
           )}
         </div>
+      )}
+      {micError && (
+        <MicHelp
+          error={micError}
+          onRetry={() => {
+            setMicError(null)
+            void handleMic()
+          }}
+          onClose={() => setMicError(null)}
+        />
       )}
       <header className="flex items-center justify-between gap-2">
         <h1 className="text-base font-semibold tracking-[0.08em] whitespace-nowrap">
