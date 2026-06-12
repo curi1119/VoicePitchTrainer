@@ -4,7 +4,7 @@
 
 ▶ **<https://curi1119.github.io/VoicePitchTrainer/>**
 
-※ React 版は移植準備中。動作確認済みのプロトタイプは <https://curi1119.github.io/VoicePitchTrainer/prototype/>
+(開発初期に使った単一 HTML のプロトタイプも <https://curi1119.github.io/VoicePitchTrainer/prototype/> で動きます)
 
 ## 機能
 

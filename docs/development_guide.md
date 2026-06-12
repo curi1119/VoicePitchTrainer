@@ -1,6 +1,6 @@
 # 開発環境構築ガイド
 
-> ※ `pitch-trainer/`(React 版)は移植開始前です。それまでの動作確認は `prototype/pitch-trainer-prototype.html` をブラウザで直接開くだけでできます(依存ゼロ)。
+> 参考: `prototype/pitch-trainer-prototype.html` は単一 HTML で、ブラウザで直接開くだけで動きます(依存ゼロ)。仕様の比較確認に使えます。
 
 ## 前提
 

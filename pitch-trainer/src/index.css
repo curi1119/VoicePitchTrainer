@@ -1,0 +1,30 @@
+@import 'tailwindcss';
+
+/* プロトタイプの配色・フォントをデザイントークンとして移植 */
+@theme {
+  --color-bg: #151c23;
+  --color-panel: #1e2832;
+  --color-panel2: #243140;
+  --color-line: #33424f;
+  --color-ink: #e9eef3;
+  --color-ink-dim: #8fa1b0;
+  --color-amber: #ffb347;
+  --color-green: #56d9a0;
+  --color-red: #ff6b6b;
+  --color-blue: #6bb8ff;
+  --font-sans: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', ui-monospace, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-sans;
+  }
+}
+
+@layer components {
+  /* select / input[type=range] の共通スタイル */
+  .ctl {
+    @apply border-line bg-panel2 text-ink rounded-md border px-2 py-[5px] text-[13px];
+  }
+}

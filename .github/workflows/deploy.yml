@@ -40,6 +40,8 @@ jobs:
           if [ -f pitch-trainer/package.json ]; then
             cd pitch-trainer
             bun install --frozen-lockfile
+            bun run lint
+            bun run test   # YIN 回帰テスト等。失敗したらデプロイしない
             bun run build -- --base="/${GITHUB_REPOSITORY#*/}/"
             cd ..
             cp -r pitch-trainer/dist/. _site/

@@ -27,9 +27,6 @@
 - 通常は Pages 経由(push して URL を開くだけ)
 - push せずに試したい場合は `npm run dev:https`(詳細は development_guide.md)
 
-## 移植(React 化)の進め方 ※現フェーズ
+## プロトタイプとの比較確認
 
-1. `audio/` の純ロジック(notes → pitch-detector → smoothing → synth)を移植し、**先に Vitest を通す**(YIN 回帰テスト含む)
-2. `mic.ts` + メインループ + チューナーモード(メーター・波形・88鍵)
-3. 単音発声モード → 音階練習モード(`modes/` を純 TS の状態機械として移植)
-4. 各段階でプロトタイプと並べて挙動・見た目を目視比較する
+挙動や見た目に迷ったら `prototype/pitch-trainer-prototype.html` をブラウザで直接開き、React 版と並べて比較する(プロトタイプが仕様の正)。意図的に挙動を変える場合は HANDOVER.md の該当箇所と docs/architecture.md を更新してから変える。
