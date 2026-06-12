@@ -12,7 +12,7 @@ import {
   playTriad,
   type Timbre,
 } from './audio/synth'
-import { loadSampledPiano } from './audio/sampled-piano'
+import { loadSampledPiano, type SampledPianoProgress } from './audio/sampled-piano'
 import { SingleMode } from './modes/single'
 import { ScaleMode, type PatternKey } from './modes/scale'
 import { Meter, type MeterHandle } from './components/Meter'
@@ -73,16 +73,27 @@ export default function App() {
     latest.current = { timbre, patternKey, bpm, guideOn }
   })
 
-  // 最初のユーザー操作でサンプルピアノのロードを開始する(AudioContext は操作起点が必要)
+  // 起動直後にサンプルピアノのロードを開始する。AudioContext はサスペンド状態でも
+  // サンプルのデコードは可能で、実際の再生開始(resume)は各操作ハンドラ内の audioContext() が行う。
+  // ロード中はロード画面を表示する(キャッシュ命中時の一瞬の点滅を避けるため 250ms 遅れて出す)
+  const [loadProgress, setLoadProgress] = useState<SampledPianoProgress>({ loaded: 0, total: 0 })
+  const [overlay, setOverlay] = useState(false)
+  const [overlaySkippable, setOverlaySkippable] = useState(false)
   useEffect(() => {
-    const kick = () => {
-      document.removeEventListener('pointerdown', kick)
-      loadSampledPiano(audioContext())
-        .then(() => setSampledReady(true))
-        .catch((e) => console.warn('サンプルピアノのロードに失敗(合成ピアノで継続):', e))
+    const showTimer = setTimeout(() => setOverlay(true), 250)
+    const skipTimer = setTimeout(() => setOverlaySkippable(true), 5000)
+    const clear = () => {
+      clearTimeout(showTimer)
+      clearTimeout(skipTimer)
     }
-    document.addEventListener('pointerdown', kick)
-    return () => document.removeEventListener('pointerdown', kick)
+    loadSampledPiano(audioContext(), (p) => setLoadProgress({ ...p }))
+      .then(() => setSampledReady(true))
+      .catch((e) => console.warn('サンプルピアノのロードに失敗(合成ピアノで継続):', e))
+      .finally(() => {
+        clear()
+        setOverlay(false)
+      })
+    return clear
   }, [])
 
   // インスタンスはマウント時に1度だけ生成する(コールバックはすべてイベント/タイマー文脈で呼ばれる)
@@ -264,6 +275,34 @@ export default function App() {
 
   return (
     <div className="mx-auto max-w-[1080px] p-4">
+      {overlay && !sampledReady && (
+        <div className="bg-bg fixed inset-0 z-50 flex flex-col items-center justify-center gap-4">
+          <div className="text-lg font-semibold tracking-[0.08em]">
+            PITCH TRAINER
+            <span className="text-ink-dim ml-2 text-xs font-normal">発声音程トレーナー</span>
+          </div>
+          <div className="text-ink-dim text-sm">ピアノ音源を読み込んでいます…</div>
+          <div className="bg-panel2 h-2 w-64 overflow-hidden rounded">
+            <i
+              className="bg-amber block h-full transition-[width] duration-150 ease-linear"
+              style={{
+                width:
+                  loadProgress.total > 0
+                    ? `${(loadProgress.loaded / loadProgress.total) * 100}%`
+                    : '0%',
+              }}
+            ></i>
+          </div>
+          <div className="text-ink-dim h-4 font-mono text-xs">
+            {loadProgress.total > 0 ? `${loadProgress.loaded} / ${loadProgress.total}` : ''}
+          </div>
+          {overlaySkippable && (
+            <Button small onClick={() => setOverlay(false)}>
+              待たずに始める(ピアノ音源は準備でき次第有効になります)
+            </Button>
+          )}
+        </div>
+      )}
       <header className="mb-3.5 flex flex-wrap items-center justify-between gap-2.5">
         <h1 className="text-lg font-semibold tracking-[0.08em]">
           PITCH TRAINER

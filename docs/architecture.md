@@ -32,7 +32,7 @@
 | テスト | Vitest(node 環境) | `audio/` と `modes/` が対象 |
 | 状態管理 | ライブラリなし | 下記「React との接続」参照 |
 | ピッチ検出 | YIN 法の自前実装 | 外部音声ライブラリ不使用(経緯: 自己相関法では男性低音で倍音誤検出 → YIN へ。HANDOVER.md §4.2) |
-| ピアノ音源 | smplr + SplendidGrandPiano(サンプル音源) | Steinway 系・パブリックドメイン。公式 CDN から遅延ロードし、未ロード中は合成ピアノにフォールバック。効果音・ビープは合成のまま |
+| ピアノ音源 | smplr + SplendidGrandPiano(サンプル音源) | Steinway 系・パブリックドメイン。公式 CDN から取得し **Cache API に永続キャッシュ(2回目以降はネットワーク不要)**。初回ロード中はロード画面(プログレスバー・5秒後にスキップ可)を表示し、未ロード中の再生は合成ピアノにフォールバック。効果音・ビープは合成のまま |
 | デプロイ | GitHub Actions → GitHub Pages | `.github/workflows/deploy.yml` |
 
 ## リポジトリ構成
@@ -121,7 +121,7 @@ pitch-trainer/
 
 ## 既知の制限・将来課題
 
-- ピアノ音源はサンプル化済み(2026-06-12、smplr + SplendidGrandPiano)。サンプルは公式 CDN(smpldsnds)から取得しているため、**オフライン/Capacitor 対応時は smplr の `baseUrl` オプションで同梱サンプルへ切り替える**。音質に不満が出たら Salamander Grand Piano(CC BY 3.0・要クレジット表記)への乗り換えが次候補。アセットはライセンス的に問題ないもののみ利用可
+- ピアノ音源はサンプル化済み(2026-06-12、smplr + SplendidGrandPiano)。サンプルは公式 CDN(smpldsnds)から取得し、Cache API で永続キャッシュするため一度ロードすればオフラインでも鳴る。**Capacitor で同梱する場合は smplr の `baseUrl` オプションで切り替える**。音質に不満が出たら Salamander Grand Piano(CC BY 3.0・要クレジット表記)への乗り換えが次候補。アセットはライセンス的に問題ないもののみ利用可
 - 音階練習でガイド音 ON + スピーカー使用時は自分のマイクがアプリ音を拾いうる(ヘッドホン推奨で運用)
 - AudioWorklet 化(検出処理のオーディオスレッド移行)は見送り中。現状メインスレッドで約 2.3ms/フレームと実用十分
 - 未着手の将来項目: 音名表記の切替(ドレミ等)、設定/スコアの localStorage 永続化、練習/テストモード切替、Capacitor によるモバイルアプリ化
