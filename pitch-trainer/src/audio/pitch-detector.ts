@@ -10,16 +10,24 @@ import { PITCH } from '../config'
  *
  * @returns 検出した基音周波数 Hz。検出できなければ -1
  */
-export function detectPitch(buf: Float32Array, sampleRate: number): number {
+export function detectPitch(
+  buf: Float32Array,
+  sampleRate: number,
+  fMin: number = PITCH.F_MIN,
+  fMax: number = PITCH.F_MAX,
+  rmsGate: number = PITCH.RMS_GATE,
+): number {
   const SIZE = buf.length
   let rms = 0
   for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i]
   rms = Math.sqrt(rms / SIZE)
-  if (rms < PITCH.RMS_GATE) return -1 // 無音/息ノイズは棄却
+  if (rms < rmsGate) return -1 // 無音/息ノイズは棄却(感度設定で可変)
 
   const half = SIZE >> 1
-  const tauMin = Math.floor(sampleRate / PITCH.F_MAX)
-  const tauMax = Math.min(Math.floor(sampleRate / PITCH.F_MIN), half - 1)
+  // 検出レンジは設定で絞れる(声域に合わせて上限を下げると、大声時に高次倍音=
+  // 例えば C3 の第5倍音 E5 へロックする誤判定を構造的に防げる)
+  const tauMin = Math.floor(sampleRate / fMax)
+  const tauMax = Math.min(Math.floor(sampleRate / fMin), half - 1)
 
   // 差分関数 d(tau)
   const d = new Float32Array(tauMax + 1)
@@ -80,5 +88,5 @@ export function detectPitch(buf: Float32Array, sampleRate: number): number {
   const betterTau = a ? tau - b / (2 * a) : tau
 
   const f = sampleRate / betterTau
-  return f >= PITCH.F_MIN && f <= PITCH.F_MAX ? f : -1
+  return f >= fMin && f <= fMax ? f : -1
 }

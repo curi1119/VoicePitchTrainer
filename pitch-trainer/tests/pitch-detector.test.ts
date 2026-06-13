@@ -97,6 +97,44 @@ describe('detectPitch (YIN) 回帰テスト', () => {
     }
   })
 
+  it('検出レンジ上限を下げると倍音ロックを構造的に防げる(音域=男声)', () => {
+    // 大声時を模した「基音が弱く第5倍音が突出した」C3 信号。
+    // 広レンジ(既定 55-1200)では第5倍音 ≒ E5 へロックしうるが、
+    // 上限を 520Hz に絞ると E5 帯は探索対象外になり高音への化けが起きない。
+    const f = freqOf(48) // C3 ≒ 130.8Hz
+    const rand = mulberry32(0x5)
+    const buf = new Float32Array(N)
+    const amps = [0.05, 0.15, 0.12, 0.18, 1.0, 0.1, 0.05, 0.05, 0, 0.4]
+    for (let i = 0; i < N; i++) {
+      let v = 0
+      for (let h = 1; h <= amps.length; h++) {
+        if (f * h > 2000) break
+        v += amps[h - 1] * Math.sin((2 * Math.PI * f * h * i) / SR + h * 0.7)
+      }
+      buf[i] = v + (rand() * 2 - 1) * 0.01
+    }
+    // 広レンジでは高音(>500Hz)へロックすることを記録(この信号の誤検出の再現)
+    const wide = detectPitch(buf, SR)
+    expect(wide).toBeGreaterThan(500)
+    // 男性レンジ(上限605=E5未満)では上限を超える検出は起きない
+    const [fMin, fMax] = PITCH.DETECT_RANGES.male
+    const capped = detectPitch(buf, SR, fMin, fMax)
+    expect(capped).toBeLessThanOrEqual(fMax)
+  })
+
+  it('各音域プリセットでレンジ内の発声を正しく検出する', () => {
+    for (const [key, [fMin, fMax]] of Object.entries(PITCH.DETECT_RANGES)) {
+      for (let midi = 24; midi <= 96; midi++) {
+        const f = freqOf(midi)
+        // レンジの内側(端の補間誤差を避け 6% マージン)だけを対象に精度を見る
+        if (f < fMin * 1.06 || f > fMax * 0.94) continue
+        const got = detectPitch(synthVoice(midi), SR, fMin, fMax)
+        expect(got, `${key} MIDI ${midi} で検出失敗`).toBeGreaterThan(0)
+        expect(Math.abs((midiOf(got) - midi) * 100), `${key} MIDI ${midi}`).toBeLessThanOrEqual(2)
+      }
+    }
+  })
+
   it('純音(サイン波)も検出できる', () => {
     const buf = new Float32Array(N)
     for (let i = 0; i < N; i++) buf[i] = 0.3 * Math.sin((2 * Math.PI * 440 * i) / SR)

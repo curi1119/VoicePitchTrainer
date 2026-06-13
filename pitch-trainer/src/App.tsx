@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { PIANO, SCALE, SINGLE, SYNTH } from './config'
-import { rmsOf } from './audio/level'
+import { PIANO, PITCH, SCALE, SINGLE, SYNTH } from './config'
+import { gateFromSensitivity, rmsOf, sensitivityFromGate } from './audio/level'
 import { describeMicError, openMic, type MicErrorInfo, type MicInput } from './audio/mic'
 import { noteFull } from './audio/notes'
 import { detectPitch } from './audio/pitch-detector'
@@ -21,9 +21,11 @@ import { PitchGraph, type PitchGraphHandle } from './components/PitchGraph'
 import { ScalePane, type Chip } from './components/ScalePane'
 import { SinglePane, type PresetKey } from './components/SinglePane'
 import { Button, Card } from './components/ui'
+import { SensitivityControl } from './components/SensitivityControl'
 import { VolumeControl } from './components/VolumeControl'
 
 type Mode = 'tuner' | 'keyboard' | 'single' | 'scale'
+type DetectRangeKey = keyof typeof PITCH.DETECT_RANGES
 
 const TABS: ReadonlyArray<readonly [Mode, string]> = [
   ['tuner', 'チューナー'],
@@ -45,6 +47,21 @@ export default function App() {
     return Number.isFinite(saved) ? Math.min(1, Math.max(0, saved)) : SYNTH.MASTER_VOLUME_DEFAULT
   })
   const [sampledReady, setSampledReady] = useState(false)
+  /** 検出音域(localStorage に保存)。声域に合わせて検出レンジを絞り倍音ロックを抑える */
+  const [detectRange, setDetectRange] = useState<DetectRangeKey>(() => {
+    const raw = localStorage.getItem('detect-range')
+    return raw != null && raw in PITCH.DETECT_RANGES
+      ? (raw as DetectRangeKey)
+      : PITCH.DETECT_RANGE_DEFAULT
+  })
+  /** マイク感度 0..1(localStorage に保存)。実効 RMS ゲートに対数マッピングする */
+  const [sensitivity, setSensitivity] = useState<number>(() => {
+    const raw = localStorage.getItem('detect-sensitivity')
+    const saved = raw == null ? NaN : Number(raw)
+    return Number.isFinite(saved)
+      ? Math.min(1, Math.max(0, saved))
+      : sensitivityFromGate(PITCH.RMS_GATE)
+  })
   const [mode, setMode] = useState<Mode>('tuner')
   /** 検出音(88鍵の青ハイライト)。音名ヒステリシス通過後なので更新頻度は低い */
   const [sung, setSung] = useState<number | null>(null)
@@ -75,11 +92,27 @@ export default function App() {
   const singleRef = useRef(new SingleMode())
   const modeRef = useRef<Mode>('tuner')
   const targetRef = useRef<number | null>(null)
+  /** メインループ(60Hz)が毎フレーム読む検出レンジ [下限Hz, 上限Hz] */
+  const detectRangeRef = useRef<readonly [number, number]>(PITCH.DETECT_RANGES[detectRange])
+  /** メインループが毎フレーム読む実効 RMS ゲート(感度設定由来) */
+  const gateRef = useRef<number>(gateFromSensitivity(sensitivity))
 
   // マスター音量を反映(初回 + つまみ操作時)
   useEffect(() => {
     setMasterVolume(volume)
   }, [volume])
+
+  // 検出レンジをメインループ用 ref に反映(+ localStorage 保存)
+  useEffect(() => {
+    detectRangeRef.current = PITCH.DETECT_RANGES[detectRange]
+    localStorage.setItem('detect-range', detectRange)
+  }, [detectRange])
+
+  // 感度 → 実効 RMS ゲートをメインループ用 ref に反映(+ localStorage 保存)
+  useEffect(() => {
+    gateRef.current = gateFromSensitivity(sensitivity)
+    localStorage.setItem('detect-sensitivity', String(sensitivity))
+  }, [sensitivity])
 
   // ScaleMode が常に最新の設定値を読めるようにする(プロトタイプが毎回 DOM を読む挙動の踏襲)
   const latest = useRef({ timbre, patternKey, bpm, guideOn })
@@ -151,8 +184,10 @@ export default function App() {
       const mic = micRef.current
       if (mic) {
         const buf = mic.read()
-        raw = detectPitch(buf, mic.sampleRate)
         rms = rmsOf(buf)
+        // 検出レンジは「音域」設定に、足切りは「感度」設定に追従
+        const [fMin, fMax] = detectRangeRef.current
+        raw = detectPitch(buf, mic.sampleRate, fMin, fMax, gateRef.current)
       }
       const frame = trackerRef.current.update(raw)
 
@@ -366,6 +401,18 @@ export default function App() {
               localStorage.setItem('master-volume', String(v))
             }}
           />
+          <SensitivityControl sensitivity={sensitivity} onChange={setSensitivity} />
+          <select
+            aria-label="音域(検出する声の高さ)"
+            title="検出する声の高さの範囲。大声で低音が高い音に化ける場合は声に合った音域を選ぶと改善します"
+            className="ctl"
+            value={detectRange}
+            onChange={(e) => setDetectRange(e.target.value as DetectRangeKey)}
+          >
+            <option value="male">音域: 男性 (D2〜D5)</option>
+            <option value="female">音域: 女性 (C3〜D6)</option>
+            <option value="wide">音域: 全域 (A1〜E6)</option>
+          </select>
           <select
             aria-label="音色"
             className="ctl"
