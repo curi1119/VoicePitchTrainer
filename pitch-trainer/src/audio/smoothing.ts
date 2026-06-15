@@ -28,6 +28,7 @@ export class PitchTracker {
   private shownNote: number | null = null
   private voicedFrames = 0
   private silentFrames = 0
+  private octaveJumpFrames = 0
 
   /** 生の検出周波数(検出なしは -1)を1フレームぶん入力する */
   update(rawFreq: number): TrackerFrame {
@@ -44,7 +45,7 @@ export class PitchTracker {
     const voiced = this.voicedFrames >= SMOOTHING.VOICED_FRAMES
     let midi: number | null = null
     if (voiced && rawFreq > 0) {
-      midi = this.smooth(midiOf(rawFreq))
+      midi = this.smooth(this.resolveOctave(midiOf(rawFreq)))
     } else if (voiced && this.ema != null) {
       midi = this.ema // 短い途切れ中は直前の値を保持
     }
@@ -77,6 +78,37 @@ export class PitchTracker {
     this.recent.length = 0
     this.ema = null
     this.shownNote = null
+    this.octaveJumpFrames = 0
+  }
+
+  /**
+   * オクターブ連続性: 確立ピッチ(ema)のちょうど整数オクターブに当たる検出は倍音/サブ倍音の
+   * 誤りとみなし、確立オクターブへ折り返す。連続して続けば意図的なオクターブ移動として受理する。
+   * 確立前(ema==null)や、最近接オクターブから OCTAVE_FOLD_TOLERANCE 超離れた検出
+   * (=オクターブでない音程移動)はそのまま通し、通常のジャンプ処理に委ねる。
+   * 単フレームでは正解と倍音ロックを分離できないため、時間方向の文脈で判別する(pYIN 的)。
+   */
+  private resolveOctave(rawMidi: number): number {
+    if (this.ema == null) {
+      this.octaveJumpFrames = 0
+      return rawMidi
+    }
+    const k = Math.round((this.ema - rawMidi) / 12)
+    if (k === 0) {
+      this.octaveJumpFrames = 0
+      return rawMidi
+    }
+    const folded = rawMidi + 12 * k
+    if (Math.abs(folded - this.ema) > SMOOTHING.OCTAVE_FOLD_TOLERANCE) {
+      this.octaveJumpFrames = 0
+      return rawMidi // オクターブでない音程移動 → ジャンプ処理へ委ねる
+    }
+    this.octaveJumpFrames++
+    if (this.octaveJumpFrames >= SMOOTHING.OCTAVE_CONFIRM_FRAMES) {
+      this.clearSmoothing() // 連続 → 意図的移動として新オクターブで再確立
+      return rawMidi
+    }
+    return folded // 短時間の倍音/サブ倍音誤り → 確立オクターブへ折り返す
   }
 
   private smooth(midiFloat: number): number {

@@ -62,4 +62,34 @@ describe('PitchTracker', () => {
     t.reset()
     expect(t.update(freqOf(60)).midi).toBeNull() // ゲートからやり直し
   })
+
+  it('オクターブ連続性: 基音↔オクターブ上の往復を確立オクターブに畳む', () => {
+    const t = new PitchTracker()
+    feed(t, 60, 30) // C4 を確立
+    // C4 と C5(+12)を交互に入れても、すべて C4 側へ折り返るはず
+    let last = t.update(freqOf(60))
+    for (let i = 0; i < 10; i++) {
+      t.update(freqOf(72)) // 1オクターブ上の倍音ロック
+      last = t.update(freqOf(60))
+    }
+    expect(Math.abs(last.midi! - 60)).toBeLessThan(0.5)
+    // 単独フレームの +12 / +24 スパイクでもオクターブ上に飛ばない
+    expect(Math.abs(t.update(freqOf(72)).midi! - 60)).toBeLessThan(0.7)
+    expect(Math.abs(t.update(freqOf(84)).midi! - 60)).toBeLessThan(0.7)
+  })
+
+  it('オクターブ連続性: 持続的なオクターブ移動は(数フレーム遅れて)受理する', () => {
+    const t = new PitchTracker()
+    feed(t, 60, 30) // C4 を確立
+    // C5 を十分長く保てば OCTAVE_CONFIRM_FRAMES 経過後に追従する
+    const res = feed(t, 72, 20)
+    expect(Math.abs(res.midi! - 72)).toBeLessThan(0.5)
+  })
+
+  it('オクターブ連続性: オクターブでない音程移動(完全5度)は折り返さない', () => {
+    const t = new PitchTracker()
+    feed(t, 60, 30)
+    const res = feed(t, 67, 12) // +7 半音はオクターブでないので通常追従する
+    expect(Math.abs(res.midi! - 67)).toBeLessThan(0.5)
+  })
 })
