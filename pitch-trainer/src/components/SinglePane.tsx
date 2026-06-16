@@ -14,16 +14,17 @@ interface SinglePaneProps {
   preset: PresetKey
   low: number
   high: number
-  score: { ok: number; all: number }
   quizDisabled: boolean
   replayDisabled: boolean
-  passDisabled: boolean
+  hideTuner: boolean
+  autoQuiz: boolean
   onPresetChange(preset: PresetKey): void
   onLowChange(midi: number): void
   onHighChange(midi: number): void
   onQuiz(): void
   onReplay(): void
-  onPass(): void
+  onHideTunerChange(on: boolean): void
+  onAutoQuizChange(on: boolean): void
 }
 
 export function SinglePane(p: SinglePaneProps) {
@@ -70,25 +71,47 @@ export function SinglePane(p: SinglePaneProps) {
             ))}
           </select>
         </span>
+        <span className="ml-auto">
+          <InfoTip>
+            出題音を聞いて、同じ高さの声を出してください。±50セント以内を
+            <strong>約1.5秒キープで正解</strong>、外れた音程のまま安定すると<strong>不正解</strong>
+            が確定します。不正解後もそのまま発声を続けて、正しい音が出せるまで練習できます。
+            <br />
+            <strong>チューナーを隠す</strong>:
+            判定が出るまでメーターを隠し、耳だけで合わせる練習ができます。
+            <br />
+            <strong>自動出題</strong>: 判定確定の約2秒後に次の問題を自動で出します。
+          </InfoTip>
+        </span>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <Button primary onClick={p.onQuiz} disabled={p.quizDisabled}>
           ▶ 出題
         </Button>
-        <Button onClick={p.onReplay} disabled={p.replayDisabled}>
-          🔁 もう一度
+        <Button
+          onClick={p.onReplay}
+          disabled={p.replayDisabled}
+          aria-label="もう一度"
+          title="もう一度(出題音を再生)"
+        >
+          🔁
         </Button>
-        <Button onClick={p.onPass} disabled={p.passDisabled}>
-          答えを見てパス
-        </Button>
-        <span className="font-mono text-sm whitespace-nowrap">
-          正解 {p.score.ok} / {p.score.all}
-        </span>
-        <span className="ml-auto">
-          <InfoTip>
-            出題音を聞いて、同じ高さの声を出してください。発声中は高い/低いをリアルタイム表示します。±50セント以内を
-            <strong>約1.5秒キープで正解</strong>、外れた音程のまま安定すると<strong>不正解</strong>
-            が確定します。不正解後もそのまま発声を続けて、正しい音が出せるまで練習できます(スコアは不正解のまま)。
-          </InfoTip>
-        </span>
+        <label className="text-ink-dim text-[13px]">
+          <input
+            type="checkbox"
+            checked={p.hideTuner}
+            onChange={(e) => p.onHideTunerChange(e.target.checked)}
+          />{' '}
+          チューナーを隠す
+        </label>
+        <label className="text-ink-dim text-[13px]">
+          <input
+            type="checkbox"
+            checked={p.autoQuiz}
+            onChange={(e) => p.onAutoQuizChange(e.target.checked)}
+          />{' '}
+          自動出題
+        </label>
       </div>
     </Card>
   )

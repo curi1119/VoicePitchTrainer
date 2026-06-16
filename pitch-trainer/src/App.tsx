@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { PIANO, PITCH, SCALE, SINGLE, SYNTH } from './config'
 import { gateFromSensitivity, rmsOf, sensitivityFromGate } from './audio/level'
 import { describeMicError, openMic, type MicErrorInfo, type MicInput } from './audio/mic'
-import { noteFull } from './audio/notes'
 import { detectPitch } from './audio/pitch-detector'
 import { PitchTracker } from './audio/smoothing'
 import { audioContext, setMasterVolume } from './audio/output'
@@ -94,10 +93,14 @@ export default function App() {
   const [high, setHigh] = useState<number>(() =>
     loadNum('single-high', SINGLE.DEFAULT_HIGH, SINGLE.RANGE_MIN, SINGLE.RANGE_MAX),
   )
-  const [score, setScore] = useState({ ok: 0, all: 0 })
   const [quizDisabled, setQuizDisabled] = useState(false)
   const [replayDisabled, setReplayDisabled] = useState(true)
-  const [passDisabled, setPassDisabled] = useState(true)
+  /** チューナーを隠すオプション(localStorage 保存)。判定が出るまでメーターを隠す */
+  const [hideTuner, setHideTuner] = useState(() => loadBool('single-hide-tuner', false))
+  /** 自動出題オプション(localStorage 保存)。判定確定の一定時間後に次を自動出題 */
+  const [autoQuiz, setAutoQuiz] = useState(() => loadBool('single-auto-quiz', false))
+  /** いまメーターを覆っているか(チューナーを隠す ON + 出題中〜判定前) */
+  const [tunerCovered, setTunerCovered] = useState(false)
   // 音階練習(設定は localStorage に保存)
   const [patternKey, setPatternKey] = useState<PatternKey>(() =>
     loadEnum('scale-pattern', Object.keys(SCALE.PATTERNS) as PatternKey[], 'p1'),
@@ -136,6 +139,17 @@ export default function App() {
   const detectRangeRef = useRef<readonly [number, number]>(PITCH.DETECT_RANGES[detectRange])
   /** メインループが毎フレーム読む実効 RMS ゲート(感度設定由来) */
   const gateRef = useRef<number>(gateFromSensitivity(sensitivity))
+  // 自動出題: メインループ(stale closure)から最新の設定とハンドラを参照するための ref
+  const autoQuizRef = useRef(autoQuiz)
+  const handleQuizRef = useRef<() => void>(() => {})
+  const autoTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => {
+    autoQuizRef.current = autoQuiz
+  }, [autoQuiz])
+  // 自動出題のタイマーから最新の handleQuiz(low/high/timbre を参照)を呼べるようにする
+  useEffect(() => {
+    handleQuizRef.current = handleQuiz
+  })
 
   // マスター音量を反映(初回 + つまみ操作時)
   useEffect(() => {
@@ -169,7 +183,9 @@ export default function App() {
     localStorage.setItem('single-preset', preset)
     localStorage.setItem('single-low', String(low))
     localStorage.setItem('single-high', String(high))
-  }, [preset, low, high])
+    localStorage.setItem('single-hide-tuner', String(hideTuner))
+    localStorage.setItem('single-auto-quiz', String(autoQuiz))
+  }, [preset, low, high, hideTuner, autoQuiz])
 
   // 音階練習の設定を localStorage に保存
   useEffect(() => {
@@ -301,15 +317,19 @@ export default function App() {
         if (res.holdRatio != null) judgeRef.current?.setHold(res.holdRatio)
         if (res.sound === 'success') playSuccess()
         if (res.sound === 'fail') playFail()
-        if (res.finished) {
+        if (res.finished && res.finished !== 'retry-ok') {
+          // 判定確定 → メーターを表示・次の出題を許可し、答えの鍵盤を表示
           const st = singleRef.current.state
-          setScore({ ok: st.ok, all: st.all })
-          if (res.finished !== 'retry-ok') {
-            // 判定確定 → 次の出題を許可し、答えの鍵盤を表示
-            setQuizDisabled(false)
-            setPassDisabled(true)
-            targetRef.current = st.target
-            setTarget(st.target)
+          setQuizDisabled(false)
+          setTunerCovered(false)
+          targetRef.current = st.target
+          setTarget(st.target)
+          // 自動出題: 確定の一定時間後に次を出題(ref 経由で最新の設定/ハンドラを読む)
+          if (autoQuizRef.current) {
+            clearTimeout(autoTimerRef.current)
+            autoTimerRef.current = setTimeout(() => {
+              if (modeRef.current === 'single') handleQuizRef.current()
+            }, SINGLE.AUTO_QUIZ_DELAY_MS)
           }
         }
       }
@@ -340,8 +360,10 @@ export default function App() {
     if (m !== 'scale') scaleRef.current?.stop()
     if (m !== 'single') {
       singleRef.current.abandon()
+      clearTimeout(autoTimerRef.current)
       targetRef.current = null
       setTarget(null)
+      setTunerCovered(false)
       judgeRef.current?.setMsg('', '')
       setQuizDisabled(false)
       judgeRef.current?.setHold(0)
@@ -376,12 +398,11 @@ export default function App() {
       alert('出題範囲が不正です')
       return
     }
+    clearTimeout(autoTimerRef.current) // 手動出題は保留中の自動出題をキャンセル
     const t = singleRef.current.startQuiz(low, high, performance.now())
-    const st = singleRef.current.state
-    setScore({ ok: st.ok, all: st.all })
     setQuizDisabled(true) // 判定が確定するまで次の出題は不可
     setReplayDisabled(false)
-    setPassDisabled(false)
+    setTunerCovered(hideTuner) // チューナーを隠す ON なら出題中はメーターを覆う
     targetRef.current = null
     setTarget(null) // 答えは隠す
     judgeRef.current?.setHold(0)
@@ -396,16 +417,15 @@ export default function App() {
     singleRef.current.replay(performance.now())
   }
 
-  function handlePass() {
-    const st = singleRef.current.state
-    const t = st.target
-    if (t == null || !singleRef.current.pass()) return
-    targetRef.current = t
-    setTarget(t)
-    judgeRef.current?.setMsg(`答えは ${noteFull(t)} でした`, 'ng')
-    setPassDisabled(true)
-    setQuizDisabled(false)
-    judgeRef.current?.setHold(0)
+  // チューナーを隠すを OFF にしたら即メーターを表示する
+  function handleHideTuner(on: boolean) {
+    setHideTuner(on)
+    if (!on) setTunerCovered(false)
+  }
+  // 自動出題を OFF にしたら保留中のタイマーを止める
+  function handleAutoQuiz(on: boolean) {
+    setAutoQuiz(on)
+    if (!on) clearTimeout(autoTimerRef.current)
   }
 
   function handleScaleStart() {
@@ -562,13 +582,23 @@ export default function App() {
       </div>
 
       {mode !== 'keyboard' && (
-        <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
+        <div className="border-line bg-panel relative flex min-h-0 flex-1 flex-col rounded-xl border p-2">
           <PitchGraph
             ref={graphRef}
             className="min-h-[180px] w-full flex-1"
             onPlayNote={(m) => playTone(m, timbre)}
           />
           <JudgeBar ref={judgeRef} />
+          {/* チューナーを隠す: 出題中〜判定前はメーターを覆い、耳で合わせさせる */}
+          {mode === 'single' && tunerCovered && (
+            <div className="bg-panel absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl p-4 text-center">
+              <div className="text-3xl">🎧</div>
+              <div className="text-ink text-sm font-semibold">メーターは非表示です</div>
+              <div className="text-ink-dim max-w-xs text-xs leading-relaxed">
+                出題音を聞いて、同じ高さだと思う声を出してください。判定が出るとメーターが表示されます。
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -619,16 +649,17 @@ export default function App() {
           preset={preset}
           low={low}
           high={high}
-          score={score}
           quizDisabled={quizDisabled}
           replayDisabled={replayDisabled}
-          passDisabled={passDisabled}
+          hideTuner={hideTuner}
+          autoQuiz={autoQuiz}
           onPresetChange={handlePreset}
           onLowChange={handleLow}
           onHighChange={handleHigh}
           onQuiz={handleQuiz}
           onReplay={handleReplay}
-          onPass={handlePass}
+          onHideTunerChange={handleHideTuner}
+          onAutoQuizChange={handleAutoQuiz}
         />
       )}
       {mode === 'scale' && (

@@ -120,6 +120,8 @@ export const SINGLE = {
   OK_HOLD_MS: 1500,
   /** 不正解確定: 外れた音程のまま安定したらこの時間で確定 */
   NG_HOLD_MS: 1200,
+  /** 自動出題(オプション): 判定確定からこの時間後に次の問題を自動出題 */
+  AUTO_QUIZ_DELAY_MS: 2000,
   /** 出題範囲プルダウンの選択肢レンジ (MIDI) */
   RANGE_MIN: 36,
   RANGE_MAX: 84,
