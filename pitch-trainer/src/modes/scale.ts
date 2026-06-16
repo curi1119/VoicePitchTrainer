@@ -13,6 +13,10 @@ export interface ScaleDeps {
   getBpm(): number
   getPatternKey(): PatternKey
   getGuideOn(): boolean
+  /** 上昇するラウンド数。折り返しONのときは「往路の長さ」になる */
+  getRoundCount(): number
+  /** 折り返し(往復)。ONなら上限まで上げたら下げて開始音へ戻り、また上げる(無限ループ) */
+  getTurnaround(): boolean
   playTone(midi: number, durSec: number): void
   playTriad(rootMidi: number, durSec: number): void
   /** ラウンド開始時にチップ(音名ラベル列)を再構築する */
@@ -31,6 +35,10 @@ export class ScaleMode {
   running = false
   base: number = SCALE.DEFAULT_BASE
   round = 0
+  /** 折り返しの基準となる開始音(往復の下端) */
+  startBase: number = SCALE.DEFAULT_BASE
+  /** 進行方向。+1 = 上昇、-1 = 下降(折り返し中のみ -1 になる) */
+  dir: 1 | -1 = 1
   /** 現在の音のインデックス(-1 はトライアド再生中) */
   idx = -1
   hits = 0
@@ -46,6 +54,8 @@ export class ScaleMode {
   start(base: number) {
     this.running = true
     this.base = base
+    this.startBase = base
+    this.dir = 1
     this.round = 1
     this.deps.onRunningChange(true)
     this.startRound()
@@ -110,15 +120,43 @@ export class ScaleMode {
     this.idx++
 
     if (this.idx >= pat.length) {
-      // 1周終了 → 結果表示して半音上げ
+      // 1周終了 → 結果表示して次の基音へ
       const okCount = this.results.filter(Boolean).length
-      this.deps.onInfo(`ラウンド ${this.round} 結果: ${okCount}/${pat.length}  → 半音上げます`)
-      this.round++
-      this.base++
-      if (this.base + Math.max(...pat) > SCALE.MAX_TOP_MIDI || this.round > SCALE.MAX_ROUNDS) {
+      const turn = this.deps.getTurnaround()
+      const count = this.deps.getRoundCount()
+      // 往路の上端(ラウンド数ぶん上げた基音)。安全弁(MAX_TOP_MIDI)も超えないようにする
+      const maxBaseByMidi = SCALE.MAX_TOP_MIDI - Math.max(...pat)
+      const topBase = Math.min(this.startBase + count - 1, maxBaseByMidi)
+
+      // 次の基音を決める
+      let nextBase: number
+      let stop = false
+      if (turn) {
+        // 端で方向を反転(無限ループ)。退化ケース(count<=1)は範囲にクランプして同音を繰り返す
+        if (this.dir > 0 && this.base >= topBase) this.dir = -1
+        else if (this.dir < 0 && this.base <= this.startBase) this.dir = 1
+        nextBase = Math.min(topBase, Math.max(this.startBase, this.base + this.dir))
+      } else {
+        nextBase = this.base + 1
+        // ラウンド数に達した or 安全弁を超えるなら停止
+        if (this.round >= count || nextBase > maxBaseByMidi) stop = true
+      }
+
+      const arrow = stop
+        ? '→ 終了'
+        : nextBase > this.base
+          ? '→ 半音上げます'
+          : nextBase < this.base
+            ? '→ 半音下げます'
+            : '→ 繰り返します'
+      this.deps.onInfo(`ラウンド ${this.round} 結果: ${okCount}/${pat.length}  ${arrow}`)
+
+      if (stop) {
         this.stop()
         return
       }
+      this.round++
+      this.base = nextBase
       this.timer = setTimeout(() => this.startRound(), beat * SCALE.ROUND_GAP_BEATS)
       return
     }

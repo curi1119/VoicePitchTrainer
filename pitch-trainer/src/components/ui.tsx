@@ -39,8 +39,19 @@ export function Card({
   )
 }
 
-/** ⓘ ボタン。タップでヒントをポップオーバー表示する(レイアウトを押し下げない) */
-export function InfoTip({ children }: { children: ReactNode }) {
+/**
+ * ⓘ ボタン。タップでヒントをポップオーバー表示する(レイアウトを押し下げない)。
+ * placement:
+ *  - 'top-right'(既定): ボタン右端を基準に上方向へ開く。右寄せ(`ml-auto`)で置く場面向け
+ *  - 'bottom-center': ボタン中央を基準に下方向へ開く。画面上部や中央寄りに置く場面向け(端での見切れ防止)
+ */
+export function InfoTip({
+  children,
+  placement = 'top-right',
+}: {
+  children: ReactNode
+  placement?: 'top-right' | 'bottom-center'
+}) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLSpanElement>(null)
 
@@ -52,6 +63,11 @@ export function InfoTip({ children }: { children: ReactNode }) {
     document.addEventListener('pointerdown', close)
     return () => document.removeEventListener('pointerdown', close)
   }, [open])
+
+  const popoverPos =
+    placement === 'bottom-center'
+      ? 'top-full left-1/2 mt-1.5 -translate-x-1/2'
+      : 'right-0 bottom-full mb-1.5'
 
   return (
     <span ref={wrapRef} className="relative inline-flex">
@@ -65,7 +81,9 @@ export function InfoTip({ children }: { children: ReactNode }) {
         ?
       </button>
       {open && (
-        <span className="border-line bg-panel2 text-ink absolute right-0 bottom-full z-30 mb-1.5 block w-80 max-w-[85vw] rounded-lg border p-3 text-xs leading-relaxed shadow-lg">
+        <span
+          className={`border-line bg-panel2 text-ink absolute z-30 block w-80 max-w-[85vw] rounded-lg border p-3 text-xs leading-relaxed shadow-lg ${popoverPos}`}
+        >
           {children}
         </span>
       )}

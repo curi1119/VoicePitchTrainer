@@ -20,12 +20,27 @@ import { Piano } from './components/Piano'
 import { PitchGraph, type PitchGraphHandle } from './components/PitchGraph'
 import { ScalePane, type Chip } from './components/ScalePane'
 import { SinglePane, type PresetKey } from './components/SinglePane'
-import { Button, Card } from './components/ui'
+import { Button, Card, InfoTip } from './components/ui'
 import { SensitivityControl } from './components/SensitivityControl'
 import { VolumeControl } from './components/VolumeControl'
 
 type Mode = 'tuner' | 'keyboard' | 'single' | 'scale'
 type DetectRangeKey = keyof typeof PITCH.DETECT_RANGES
+
+// ---- localStorage 読み出しヘルパ(未保存・不正値はフォールバック)----
+function loadNum(key: string, fallback: number, min = -Infinity, max = Infinity): number {
+  const raw = localStorage.getItem(key)
+  const n = raw == null ? NaN : Number(raw)
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback
+}
+function loadEnum<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
+  const raw = localStorage.getItem(key)
+  return raw != null && (allowed as readonly string[]).includes(raw) ? (raw as T) : fallback
+}
+function loadBool(key: string, fallback: boolean): boolean {
+  const raw = localStorage.getItem(key)
+  return raw == null ? fallback : raw === 'true'
+}
 
 const TABS: ReadonlyArray<readonly [Mode, string]> = [
   ['tuner', 'チューナー'],
@@ -63,23 +78,48 @@ export default function App() {
       : sensitivityFromGate(PITCH.RMS_GATE)
   })
   const [mode, setMode] = useState<Mode>('tuner')
+  /** 鍵盤の全画面表示(スマホで鍵を大きく出すための CSS オーバーレイ) */
+  const [keyboardFull, setKeyboardFull] = useState(false)
   /** 検出音(88鍵の青ハイライト)。音名ヒステリシス通過後なので更新頻度は低い */
   const [sung, setSung] = useState<number | null>(null)
   /** 目標音(88鍵のオレンジ枠) */
   const [target, setTarget] = useState<number | null>(null)
-  // 単音発声トレーニング
-  const [preset, setPreset] = useState<PresetKey>('custom')
-  const [low, setLow] = useState<number>(SINGLE.DEFAULT_LOW)
-  const [high, setHigh] = useState<number>(SINGLE.DEFAULT_HIGH)
+  // 単音発声トレーニング(設定は localStorage に保存)
+  const [preset, setPreset] = useState<PresetKey>(() =>
+    loadEnum('single-preset', ['male', 'female', 'custom'] as const, 'custom'),
+  )
+  const [low, setLow] = useState<number>(() =>
+    loadNum('single-low', SINGLE.DEFAULT_LOW, SINGLE.RANGE_MIN, SINGLE.RANGE_MAX),
+  )
+  const [high, setHigh] = useState<number>(() =>
+    loadNum('single-high', SINGLE.DEFAULT_HIGH, SINGLE.RANGE_MIN, SINGLE.RANGE_MAX),
+  )
   const [score, setScore] = useState({ ok: 0, all: 0 })
   const [quizDisabled, setQuizDisabled] = useState(false)
   const [replayDisabled, setReplayDisabled] = useState(true)
   const [passDisabled, setPassDisabled] = useState(true)
-  // 音階練習
-  const [patternKey, setPatternKey] = useState<PatternKey>('p1')
-  const [scaleBase, setScaleBase] = useState<number>(SCALE.DEFAULT_BASE)
-  const [bpm, setBpm] = useState<number>(SCALE.BPM_DEFAULT)
-  const [guideOn, setGuideOn] = useState(true)
+  // 音階練習(設定は localStorage に保存)
+  const [patternKey, setPatternKey] = useState<PatternKey>(() =>
+    loadEnum('scale-pattern', Object.keys(SCALE.PATTERNS) as PatternKey[], 'p1'),
+  )
+  const [scaleBase, setScaleBase] = useState<number>(() =>
+    loadNum('scale-base', SCALE.DEFAULT_BASE, SCALE.BASE_MIN, SCALE.BASE_MAX),
+  )
+  const [bpm, setBpm] = useState<number>(() =>
+    loadNum('scale-bpm', SCALE.BPM_DEFAULT, SCALE.BPM_MIN, SCALE.BPM_MAX),
+  )
+  const [guideOn, setGuideOn] = useState(() => loadBool('scale-guide', true))
+  const [roundCount, setRoundCount] = useState<number>(() =>
+    loadNum(
+      'scale-round-count',
+      SCALE.ROUND_COUNT_DEFAULT,
+      SCALE.ROUND_COUNT_MIN,
+      SCALE.ROUND_COUNT_MAX,
+    ),
+  )
+  const [turnaround, setTurnaround] = useState(() =>
+    loadBool('scale-turnaround', SCALE.TURNAROUND_DEFAULT),
+  )
   const [scaleRunning, setScaleRunning] = useState(false)
   const [scaleInfo, setScaleInfo] = useState('')
   const [chips, setChips] = useState<Chip[]>([])
@@ -102,6 +142,16 @@ export default function App() {
     setMasterVolume(volume)
   }, [volume])
 
+  // 鍵盤の全画面表示は Escape で閉じる
+  useEffect(() => {
+    if (!keyboardFull) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setKeyboardFull(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [keyboardFull])
+
   // 検出レンジをメインループ用 ref に反映(+ localStorage 保存)
   useEffect(() => {
     detectRangeRef.current = PITCH.DETECT_RANGES[detectRange]
@@ -114,10 +164,27 @@ export default function App() {
     localStorage.setItem('detect-sensitivity', String(sensitivity))
   }, [sensitivity])
 
-  // ScaleMode が常に最新の設定値を読めるようにする(プロトタイプが毎回 DOM を読む挙動の踏襲)
-  const latest = useRef({ timbre, patternKey, bpm, guideOn })
+  // 単音発声の設定を localStorage に保存(プリセット選択時は low/high も同期されるため一括で保存)
   useEffect(() => {
-    latest.current = { timbre, patternKey, bpm, guideOn }
+    localStorage.setItem('single-preset', preset)
+    localStorage.setItem('single-low', String(low))
+    localStorage.setItem('single-high', String(high))
+  }, [preset, low, high])
+
+  // 音階練習の設定を localStorage に保存
+  useEffect(() => {
+    localStorage.setItem('scale-pattern', patternKey)
+    localStorage.setItem('scale-base', String(scaleBase))
+    localStorage.setItem('scale-bpm', String(bpm))
+    localStorage.setItem('scale-guide', String(guideOn))
+    localStorage.setItem('scale-round-count', String(roundCount))
+    localStorage.setItem('scale-turnaround', String(turnaround))
+  }, [patternKey, scaleBase, bpm, guideOn, roundCount, turnaround])
+
+  // ScaleMode が常に最新の設定値を読めるようにする(プロトタイプが毎回 DOM を読む挙動の踏襲)
+  const latest = useRef({ timbre, patternKey, bpm, guideOn, roundCount, turnaround })
+  useEffect(() => {
+    latest.current = { timbre, patternKey, bpm, guideOn, roundCount, turnaround }
   })
 
   // 起動直後にサンプルピアノのロードを開始する。AudioContext はサスペンド状態でも
@@ -159,6 +226,8 @@ export default function App() {
       getBpm: () => latest.current.bpm,
       getPatternKey: () => latest.current.patternKey,
       getGuideOn: () => latest.current.guideOn,
+      getRoundCount: () => latest.current.roundCount,
+      getTurnaround: () => latest.current.turnaround,
       playTone: (m, d) => playTone(m, latest.current.timbre, d),
       playTriad: (m, d) => playTriad(m, latest.current.timbre, d),
       onChips: (labels) => setChips(labels.map((label) => ({ label, state: '' }))),
@@ -267,6 +336,7 @@ export default function App() {
   function switchMode(m: Mode) {
     setMode(m)
     modeRef.current = m
+    if (m !== 'keyboard') setKeyboardFull(false)
     if (m !== 'scale') scaleRef.current?.stop()
     if (m !== 'single') {
       singleRef.current.abandon()
@@ -376,6 +446,40 @@ export default function App() {
           )}
         </div>
       )}
+      {keyboardFull && (
+        <div className="bg-bg fixed inset-0 z-50 flex flex-col gap-2 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center justify-between">
+            <span className="text-ink-dim text-xs">🎹 鍵盤(全画面)</span>
+            <Button small onClick={() => setKeyboardFull(false)}>
+              ✕ 閉じる
+            </Button>
+          </div>
+          {/* スマホは縦置き(低音が下)で鍵を大きく */}
+          <div className="min-h-0 flex-1 md:hidden">
+            <div className="mx-auto h-full max-w-[360px]">
+              <Piano
+                vertical
+                thickness={48}
+                sung={sung}
+                target={target}
+                onPlay={(m) => playTone(m, timbre)}
+              />
+            </div>
+          </div>
+          {/* md 以上は横置き。大画面で鍵が縦長になりすぎないよう高さに上限を設け中央に置く */}
+          <div className="hidden min-h-0 flex-1 md:flex md:items-center md:justify-center">
+            <div className="h-full max-h-[320px] w-full">
+              <Piano
+                thickness={40}
+                length="fill"
+                sung={sung}
+                target={target}
+                onPlay={(m) => playTone(m, timbre)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {micError && (
         <MicHelp
           error={micError}
@@ -393,7 +497,7 @@ export default function App() {
             発声音程トレーナー
           </span>
         </h1>
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <VolumeControl
             volume={volume}
             onChange={(v) => {
@@ -402,17 +506,25 @@ export default function App() {
             }}
           />
           <SensitivityControl sensitivity={sensitivity} onChange={setSensitivity} />
-          <select
-            aria-label="音域(検出する声の高さ)"
-            title="検出する声の高さの範囲。大声で低音が高い音に化ける場合は声に合った音域を選ぶと改善します"
-            className="ctl"
-            value={detectRange}
-            onChange={(e) => setDetectRange(e.target.value as DetectRangeKey)}
-          >
-            <option value="male">音域: 男性 (D2〜D5)</option>
-            <option value="female">音域: 女性 (C3〜D6)</option>
-            <option value="wide">音域: 全域 (A1〜E6)</option>
-          </select>
+          <span className="flex items-center gap-1">
+            <select
+              aria-label="音域(検出する声の高さ)"
+              title="検出する声の高さの範囲。大声で低音が高い音に化ける場合は声に合った音域を選ぶと改善します"
+              className="ctl"
+              value={detectRange}
+              onChange={(e) => setDetectRange(e.target.value as DetectRangeKey)}
+            >
+              <option value="male">男性</option>
+              <option value="female">女性</option>
+              <option value="wide">全域</option>
+            </select>
+            <InfoTip placement="bottom-center">
+              左のセレクトは<strong>音域</strong>
+              (検出する声の高さの範囲)です。大声で低音が高い音に化ける場合は、声に合った音域を選ぶと改善します。
+              <br />
+              男性: D2〜D5 / 女性: C3〜D6 / 全域: A1〜E6
+            </InfoTip>
+          </span>
           <select
             aria-label="音色"
             className="ctl"
@@ -463,6 +575,11 @@ export default function App() {
       {/* 鍵盤モード: 88鍵のみを画面いっぱいに表示(スマホは縦置き=低音が下) */}
       {mode === 'keyboard' && (
         <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
+          <div className="mb-1 flex justify-end">
+            <Button small onClick={() => setKeyboardFull(true)}>
+              ⛶ 全画面
+            </Button>
+          </div>
           {/* 鍵が間延びしないよう長さに上限(実物のピアノ比)を設け、左右中央に置く */}
           <div className="min-h-0 flex-1 md:hidden">
             <div className="mx-auto h-full max-w-[260px]">
@@ -520,6 +637,8 @@ export default function App() {
           base={scaleBase}
           bpm={bpm}
           guideOn={guideOn}
+          roundCount={roundCount}
+          turnaround={turnaround}
           running={scaleRunning}
           info={scaleInfo}
           chips={chips}
@@ -527,6 +646,8 @@ export default function App() {
           onBaseChange={setScaleBase}
           onBpmChange={setBpm}
           onGuideChange={setGuideOn}
+          onRoundCountChange={setRoundCount}
+          onTurnaroundChange={setTurnaround}
           onStart={handleScaleStart}
           onStop={() => scaleRef.current?.stop()}
         />

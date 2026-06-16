@@ -26,6 +26,8 @@ interface ScalePaneProps {
   base: number
   bpm: number
   guideOn: boolean
+  roundCount: number
+  turnaround: boolean
   running: boolean
   info: string
   chips: Chip[]
@@ -33,6 +35,8 @@ interface ScalePaneProps {
   onBaseChange(midi: number): void
   onBpmChange(bpm: number): void
   onGuideChange(on: boolean): void
+  onRoundCountChange(count: number): void
+  onTurnaroundChange(on: boolean): void
   onStart(): void
   onStop(): void
 }
@@ -78,6 +82,33 @@ export function ScalePane(p: ScalePaneProps) {
           />
           <span className="text-amber font-mono text-[13px]">{p.bpm}</span>
         </span>
+        <label className="text-ink-dim flex items-center gap-1 text-[13px]">
+          ラウンド数
+          <input
+            aria-label="ラウンド数"
+            type="number"
+            className="ctl w-14"
+            min={SCALE.ROUND_COUNT_MIN}
+            max={SCALE.ROUND_COUNT_MAX}
+            value={p.roundCount}
+            onChange={(e) => {
+              const n = Math.round(Number(e.target.value))
+              if (Number.isFinite(n)) {
+                p.onRoundCountChange(
+                  Math.min(SCALE.ROUND_COUNT_MAX, Math.max(SCALE.ROUND_COUNT_MIN, n)),
+                )
+              }
+            }}
+          />
+        </label>
+        <label className="text-ink-dim text-[13px]">
+          <input
+            type="checkbox"
+            checked={p.turnaround}
+            onChange={(e) => p.onTurnaroundChange(e.target.checked)}
+          />{' '}
+          折り返し
+        </label>
         <label className="text-ink-dim text-[13px]">
           <input
             type="checkbox"
@@ -94,8 +125,10 @@ export function ScalePane(p: ScalePaneProps) {
         </Button>
         <span className="ml-auto">
           <InfoTip>
-            開始前に基音の和音、続いてガイド音が鳴るので、合わせて発声してください。1周ごとに半音ずつ上がっていきます。※ガイド音ON時はマイクがアプリの音を拾うため
-            <strong>ヘッドホン推奨</strong>です。
+            開始前に基音の和音、続いてガイド音が鳴るので、合わせて発声してください。1周ごとに半音ずつ上がり、
+            <strong>ラウンド数</strong>ぶん上げたら終了します。<strong>折り返し</strong>
+            にチェックを入れると、上げきった後は半音ずつ下げて開始音まで戻り、また上がる…を停止するまで繰り返します。
+            ※ガイド音ON時はマイクがアプリの音を拾うため<strong>ヘッドホン推奨</strong>です。
           </InfoTip>
         </span>
       </div>

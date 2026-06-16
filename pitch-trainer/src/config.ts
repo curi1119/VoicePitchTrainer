@@ -171,10 +171,19 @@ export const SCALE = {
   BPM_MAX: 160,
   BPM_DEFAULT: 80,
   BPM_STEP: 5,
-  /** 最高音がこれを超えるラウンドには進まない */
+  /** 最高音がこれを超えるラウンドには進まない(声が高くなりすぎない安全弁) */
   MAX_TOP_MIDI: 96,
-  /** これを超えるラウンドには進まない */
-  MAX_ROUNDS: 24,
+  /**
+   * ラウンド数(上昇する回数)。
+   * 折り返しOFF: このラウンド数だけ半音ずつ上げて停止。
+   * 折り返しON: このラウンド数ぶん上げたら半音ずつ下げて開始音まで戻り、また上げる(無限ループ)。
+   * MAX は安全弁(MAX_TOP_MIDI に達する前に十分大きい値)。
+   */
+  ROUND_COUNT_DEFAULT: 10,
+  ROUND_COUNT_MIN: 1,
+  ROUND_COUNT_MAX: 24,
+  /** 折り返し(往復)の初期値 */
+  TURNAROUND_DEFAULT: false,
 } as const
 
 /** ピッチグラフ(時間×音高) */

@@ -12,7 +12,15 @@ interface Recorded {
   running: boolean[]
 }
 
-function makeDeps(over: { bpm?: number; pattern?: PatternKey; guide?: boolean } = {}) {
+function makeDeps(
+  over: {
+    bpm?: number
+    pattern?: PatternKey
+    guide?: boolean
+    roundCount?: number
+    turnaround?: boolean
+  } = {},
+) {
   const rec: Recorded = {
     chips: [],
     chipStates: [],
@@ -26,6 +34,8 @@ function makeDeps(over: { bpm?: number; pattern?: PatternKey; guide?: boolean } 
     getBpm: () => over.bpm ?? 60, // 1拍 = 1000ms
     getPatternKey: () => over.pattern ?? 'p1',
     getGuideOn: () => over.guide ?? true,
+    getRoundCount: () => over.roundCount ?? SCALE.ROUND_COUNT_MAX,
+    getTurnaround: () => over.turnaround ?? false,
     playTone: (m, d) => rec.tones.push([m, d]),
     playTriad: (m, d) => rec.triads.push([m, d]),
     onChips: (l) => rec.chips.push(l),
@@ -122,14 +132,33 @@ describe('ScaleMode', () => {
     expect(rec.targets[rec.targets.length - 1]).toBeNull()
   })
 
-  it('24 ラウンドで自動停止する', () => {
-    const { deps } = makeDeps()
+  it('設定したラウンド数だけ上げて自動停止する(折り返しOFF)', () => {
+    const { deps, rec } = makeDeps({ roundCount: 3 })
     const m = new ScaleMode(deps)
     m.start(48)
-    vi.advanceTimersByTime(24 * (2500 + 9 * 1000 + 2000))
+    // 1ラウンド = 2500(リードイン) + 9*1000(9音) + 2000(ラウンド間) = 13500ms
+    vi.advanceTimersByTime(3 * 13500)
     expect(m.running).toBe(false)
-    expect(m.round).toBe(25)
-    expect(m.base).toBe(48 + 24)
+    expect(m.round).toBe(3)
+    expect(m.base).toBe(50) // 48 → 49 → 50 の3ラウンド
+    expect(rec.infos).toContain('ラウンド 3 結果: 0/9  → 終了')
+  })
+
+  it('折り返しONは上限まで上げたら下げて開始音へ戻り、停止せず往復する', () => {
+    const { deps, rec } = makeDeps({ roundCount: 3, turnaround: true })
+    const m = new ScaleMode(deps)
+    m.start(48) // 往路の上端 = 48 + 3 - 1 = 50
+
+    // 上り: 48 → 49 → 50(上端)→ 折り返し下り: 49 → 48(下端)→ また上り: 49 ...
+    vi.advanceTimersByTime(6 * 13500)
+    expect(m.running).toBe(true) // 無限ループなので止まらない
+    expect(m.base).toBeGreaterThanOrEqual(48)
+    expect(m.base).toBeLessThanOrEqual(50)
+    // 下降(半音下げ)が一度は起きている
+    expect(rec.infos.some((t) => t.includes('→ 半音下げます'))).toBe(true)
+
+    m.stop()
+    expect(m.running).toBe(false)
   })
 
   it('停止すると以後のタイマーは何もしない', () => {
