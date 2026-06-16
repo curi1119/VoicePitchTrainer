@@ -78,11 +78,19 @@ describe('PitchTracker', () => {
     expect(Math.abs(t.update(freqOf(84)).midi! - 60)).toBeLessThan(0.7)
   })
 
-  it('オクターブ連続性: 持続的なオクターブ移動は(数フレーム遅れて)受理する', () => {
+  it('オクターブ連続性: 数百ms続く倍音ロックでも畳む(受理閾値未満)', () => {
     const t = new PitchTracker()
     feed(t, 60, 30) // C4 を確立
-    // C5 を十分長く保てば OCTAVE_CONFIRM_FRAMES 経過後に追従する
+    // C5 が確認フレーム数(30)未満だけ続く間は倍音ロックとみなし C4 へ畳む
     const res = feed(t, 72, 20)
+    expect(Math.abs(res.midi! - 60)).toBeLessThan(0.5)
+  })
+
+  it('オクターブ連続性: 確認フレームを超えて持続するオクターブ移動は受理する', () => {
+    const t = new PitchTracker()
+    feed(t, 60, 30) // C4 を確立
+    // C5 を確認フレーム数より十分長く保てば意図的移動として追従する
+    const res = feed(t, 72, 45)
     expect(Math.abs(res.midi! - 72)).toBeLessThan(0.5)
   })
 
