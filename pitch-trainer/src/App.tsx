@@ -582,23 +582,25 @@ export default function App() {
       </div>
 
       {mode !== 'keyboard' && (
-        <div className="border-line bg-panel relative flex min-h-0 flex-1 flex-col rounded-xl border p-2">
-          <PitchGraph
-            ref={graphRef}
-            className="min-h-[180px] w-full flex-1"
-            onPlayNote={(m) => playTone(m, timbre)}
-          />
-          <JudgeBar ref={judgeRef} />
-          {/* チューナーを隠す: 出題中〜判定前はメーターを覆い、耳で合わせさせる */}
-          {mode === 'single' && tunerCovered && (
-            <div className="bg-panel absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl p-4 text-center">
-              <div className="text-3xl">🎧</div>
-              <div className="text-ink text-sm font-semibold">メーターは非表示です</div>
-              <div className="text-ink-dim max-w-xs text-xs leading-relaxed">
-                出題音を聞いて、同じ高さだと思う声を出してください。判定が出るとメーターが表示されます。
+        <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
+          {/* チューナーを隠すオプションで覆うのはこの音高メーター部分のみ。下の JudgeBar(メッセージ・進捗バー)は隠さない */}
+          <div className="relative flex min-h-0 w-full flex-1 flex-col">
+            <PitchGraph
+              ref={graphRef}
+              className="min-h-[180px] w-full flex-1"
+              onPlayNote={(m) => playTone(m, timbre)}
+            />
+            {mode === 'single' && tunerCovered && (
+              <div className="bg-panel2 absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-lg p-4 text-center">
+                <div className="text-3xl">🎧</div>
+                <div className="text-ink text-sm font-semibold">音高メーターは非表示です</div>
+                <div className="text-ink-dim max-w-xs text-xs leading-relaxed">
+                  下のメッセージを頼りに、耳で合わせて発声してください。判定が出るとメーターが表示されます。
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+          <JudgeBar ref={judgeRef} />
         </div>
       )}
 
