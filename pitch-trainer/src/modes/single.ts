@@ -61,10 +61,16 @@ export class SingleMode {
     return s.target
   }
 
-  /** もう一度聞く(再生し直し、判定を一時停止) */
+  /**
+   * もう一度聞く(再生し直し、判定を一時停止)。
+   * 再生中はマイクがアプリ音を拾うため判定を止める。進捗バーが固まったまま残らないよう、
+   * キープ/外れ時間もリセットして「仕切り直し」にする。
+   */
   replay(now: number) {
     if (this.state.target == null) return
     this.state.judgeFrom = now + SINGLE.QUIZ_TONE_DUR * 1000 + SINGLE.JUDGE_DELAY_MS
+    this.state.holdMs = 0
+    this.state.wrongMs = 0
   }
 
   /** 答えを見てパス。成立したら true */

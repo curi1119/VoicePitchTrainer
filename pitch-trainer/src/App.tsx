@@ -415,6 +415,9 @@ export default function App() {
     if (st.target == null) return
     playTone(st.target, timbre, SINGLE.QUIZ_TONE_DUR)
     singleRef.current.replay(performance.now())
+    // 再生中は判定を止めるため、固まって見えるキープバーは 0 に戻して仕切り直しを明示
+    judgeRef.current?.setHold(0)
+    judgeRef.current?.setMsg('♪ 出題音を再生中…よく聞いてください', '')
   }
 
   // チューナーを隠すを OFF にしたら即メーターを表示する

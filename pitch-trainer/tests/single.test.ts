@@ -111,6 +111,19 @@ describe('SingleMode', () => {
     expect(m.state.solved).toBe(true)
   })
 
+  it('もう一度(replay)はキープ/外れ進捗をリセットし再生待ちに戻す', () => {
+    const m = new SingleMode()
+    const t0 = startQuiz(m, 60)
+    run(m, 60, t0, 8) // 800ms キープ(バーが進んだ状態)
+    expect(m.state.holdMs).toBe(800)
+
+    m.replay(t0 + 1000)
+    expect(m.state.holdMs).toBe(0) // バーが固まったまま残らないようリセット
+    expect(m.state.wrongMs).toBe(0)
+    // 再生待ち中は判定しない(マイクがアプリ音を拾うため)
+    expect(m.frame(60, t0 + 1100, true)!.msg.text).toContain('再生中')
+  })
+
   it('非アクティブ(他タブ)では判定しないが時刻は進む', () => {
     const m = new SingleMode()
     const t0 = startQuiz(m, 60)
