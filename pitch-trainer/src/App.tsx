@@ -444,8 +444,8 @@ export default function App() {
       {overlay && !sampledReady && (
         <div className="bg-bg fixed inset-0 z-50 flex flex-col items-center justify-center gap-4">
           <div className="text-lg font-semibold tracking-[0.08em]">
-            PITCH TRAINER
-            <span className="text-ink-dim ml-2 text-xs font-normal">発声音程トレーナー</span>
+            PITCH LAB
+            <span className="text-ink-dim ml-2 text-xs font-normal">ピッチラボ</span>
           </div>
           <div className="text-ink-dim text-sm">ピアノ音源を読み込んでいます…</div>
           <div className="bg-panel2 h-2 w-64 overflow-hidden rounded">
@@ -515,9 +515,9 @@ export default function App() {
       )}
       <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <h1 className="text-sm font-semibold tracking-[0.08em] whitespace-nowrap sm:text-base">
-          PITCH TRAINER
+          PITCH LAB
           <span className="text-ink-dim ml-2 hidden text-xs font-normal sm:inline">
-            発声音程トレーナー
+            ピッチラボ
           </span>
         </h1>
         <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
