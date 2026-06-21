@@ -206,20 +206,22 @@ export function Piano({
                   {k.label}
                 </span>
               )}
-              {showDegree && keyRoot != null && (() => {
-                const deg = degreeLabel(k.midi, keyRoot)
-                return deg ? (
-                  <span
-                    className={
-                      vertical
-                        ? `pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 -rotate-90 font-mono text-[9px] font-bold ${k.black ? 'text-white/80' : 'text-[#4a7a9b]'}`
-                        : `pointer-events-none absolute top-[3px] w-full text-center font-mono text-[9px] font-bold ${k.black ? 'text-white/80' : 'text-[#4a7a9b]'}`
-                    }
-                  >
-                    {deg}
-                  </span>
-                ) : null
-              })()}
+              {showDegree &&
+                keyRoot != null &&
+                (() => {
+                  const deg = degreeLabel(k.midi, keyRoot)
+                  return deg ? (
+                    <span
+                      className={
+                        vertical
+                          ? `pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 -rotate-90 font-mono text-[9px] font-bold ${k.black ? 'text-white/80' : 'text-[#4a7a9b]'}`
+                          : `pointer-events-none absolute top-[3px] w-full text-center font-mono text-[9px] font-bold ${k.black ? 'text-white/80' : 'text-[#4a7a9b]'}`
+                      }
+                    >
+                      {deg}
+                    </span>
+                  ) : null
+                })()}
             </div>
           )
         })}

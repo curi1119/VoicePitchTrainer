@@ -544,9 +544,7 @@ export default function App() {
       <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <h1 className="text-sm font-semibold tracking-[0.08em] whitespace-nowrap sm:text-base">
           PITCH LAB
-          <span className="text-ink-dim ml-2 hidden text-xs font-normal sm:inline">
-            ピッチラボ
-          </span>
+          <span className="text-ink-dim ml-2 hidden text-xs font-normal sm:inline">ピッチラボ</span>
         </h1>
         <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <VolumeControl
@@ -787,12 +785,24 @@ export default function App() {
           🎹 88鍵キーボードを表示
         </summary>
         <div className="border-line bg-panel mt-1 rounded-lg border p-2">
-          <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} keyRoot={mode === 'tuner' ? tunerKey : null} showDegree={mode === 'tuner' && showDegree} />
+          <Piano
+            sung={sung}
+            target={target}
+            onPlay={(m) => playTone(m, timbre)}
+            keyRoot={mode === 'tuner' ? tunerKey : null}
+            showDegree={mode === 'tuner' && showDegree}
+          />
         </div>
       </details>
       <div className={mode === 'keyboard' ? 'hidden' : 'hidden md:block'}>
         <Card title="Keyboard — A0 ~ C8 (88 keys)">
-          <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} keyRoot={mode === 'tuner' ? tunerKey : null} showDegree={mode === 'tuner' && showDegree} />
+          <Piano
+            sung={sung}
+            target={target}
+            onPlay={(m) => playTone(m, timbre)}
+            keyRoot={mode === 'tuner' ? tunerKey : null}
+            showDegree={mode === 'tuner' && showDegree}
+          />
         </Card>
       </div>
     </div>

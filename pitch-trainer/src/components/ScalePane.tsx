@@ -117,7 +117,7 @@ export function ScalePane(p: ScalePaneProps) {
           </label>
         </div>
         {/* PC: 折り返しの後にガイド音 */}
-        <label className="text-ink-dim max-md:hidden text-[13px]">
+        <label className="text-ink-dim text-[13px] max-md:hidden">
           <input
             type="checkbox"
             checked={p.guideOn}
@@ -149,9 +149,7 @@ export function ScalePane(p: ScalePaneProps) {
           </span>
         </div>
       </div>
-      {p.info && (
-        <div className="text-ink-dim mt-1.5 min-h-[18px] font-mono text-xs">{p.info}</div>
-      )}
+      {p.info && <div className="text-ink-dim mt-1.5 min-h-[18px] font-mono text-xs">{p.info}</div>}
       {p.chips.length > 0 && (
         <div className="mt-1 flex gap-1 overflow-x-auto pb-0.5">
           {p.chips.map((c, i) => (

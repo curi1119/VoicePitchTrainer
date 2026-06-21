@@ -203,11 +203,8 @@ export function PitchGraph({
             const inZone = p.target != null && Math.abs(p.midi - p.target) * 100 <= p.tol
             const kr = keyRootRef.current
             const freeColor =
-              kr != null && !isInKey(Math.round(p.midi), kr)
-                ? COLORS.traceOffKey
-                : COLORS.traceFree
-            c.strokeStyle =
-              p.target == null ? freeColor : inZone ? COLORS.traceIn : COLORS.traceOut
+              kr != null && !isInKey(Math.round(p.midi), kr) ? COLORS.traceOffKey : COLORS.traceFree
+            c.strokeStyle = p.target == null ? freeColor : inZone ? COLORS.traceIn : COLORS.traceOut
             c.beginPath()
             c.moveTo(Math.max(kw, xOf(prev.t)), yOfMidi(prev.midi, range, h))
             c.lineTo(xOf(p.t), yOfMidi(p.midi, range, h))
