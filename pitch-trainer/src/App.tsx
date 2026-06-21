@@ -144,6 +144,7 @@ export default function App() {
   const autoQuizRef = useRef(autoQuiz)
   const handleQuizRef = useRef<() => void>(() => {})
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const quizLockRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => {
     autoQuizRef.current = autoQuiz
   }, [autoQuiz])
@@ -322,9 +323,8 @@ export default function App() {
         if (res.sound === 'success') playSuccess()
         if (res.sound === 'fail') playFail()
         if (res.finished && res.finished !== 'retry-ok') {
-          // 判定確定 → メーターを表示・次の出題を許可し、答えの鍵盤を表示
+          // 判定確定 → メーターを表示し、答えの鍵盤を表示
           const st = singleRef.current.state
-          setQuizDisabled(false)
           setTunerCovered(false)
           targetRef.current = st.target
           setTarget(st.target)
@@ -365,6 +365,7 @@ export default function App() {
     if (m !== 'single') {
       singleRef.current.abandon()
       clearTimeout(autoTimerRef.current)
+      clearTimeout(quizLockRef.current)
       targetRef.current = null
       setTarget(null)
       setTunerCovered(false)
@@ -404,7 +405,9 @@ export default function App() {
     }
     clearTimeout(autoTimerRef.current) // 手動出題は保留中の自動出題をキャンセル
     const t = singleRef.current.startQuiz(low, high, performance.now())
-    setQuizDisabled(true) // 判定が確定するまで次の出題は不可
+    setQuizDisabled(true)
+    clearTimeout(quizLockRef.current)
+    quizLockRef.current = setTimeout(() => setQuizDisabled(false), 3000)
     setReplayDisabled(false)
     setTunerCovered(hideTuner) // チューナーを隠す ON なら出題中はメーターを覆う
     targetRef.current = null
