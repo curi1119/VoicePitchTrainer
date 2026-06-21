@@ -624,7 +624,7 @@ export default function App() {
               </div>
             )}
           </div>
-          <JudgeBar ref={judgeRef} />
+          {mode === 'single' && <JudgeBar ref={judgeRef} />}
         </div>
       )}
 
