@@ -77,6 +77,13 @@ export default function App() {
       ? Math.min(1, Math.max(0, saved))
       : sensitivityFromGate(PITCH.RMS_GATE)
   })
+  /** チューナーのキー選択(null=キーなし)。localStorage に保存 */
+  const [tunerKey, setTunerKey] = useState<number | null>(() => {
+    const raw = localStorage.getItem('tuner-key')
+    if (raw == null) return null
+    const n = Number(raw)
+    return Number.isInteger(n) && n >= 0 && n <= 11 ? n : null
+  })
   const [mode, setMode] = useState<Mode>('tuner')
   /** 鍵盤の全画面表示(スマホで鍵を大きく出すための CSS オーバーレイ) */
   const [keyboardFull, setKeyboardFull] = useState(false)
@@ -167,6 +174,11 @@ export default function App() {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [keyboardFull])
+
+  useEffect(() => {
+    if (tunerKey == null) localStorage.removeItem('tuner-key')
+    else localStorage.setItem('tuner-key', String(tunerKey))
+  }, [tunerKey])
 
   // 検出レンジをメインループ用 ref に反映(+ localStorage 保存)
   useEffect(() => {
@@ -599,6 +611,7 @@ export default function App() {
             <PitchGraph
               ref={graphRef}
               className="min-h-[180px] w-full flex-1"
+              keyRoot={mode === 'tuner' ? tunerKey : null}
               onPlayNote={(m) => playTone(m, timbre)}
             />
             {mode === 'single' && tunerCovered && (
@@ -652,9 +665,28 @@ export default function App() {
 
       {mode === 'tuner' && (
         <Card className="p-2.5">
-          <p className="text-ink-dim text-xs">
-            マイクを開始して声を出すと、検出した音程がグラフに軌跡として表示されます。グラフ左の鍵盤をタップすると参照音が鳴ります。
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-ink-dim flex items-center gap-1 text-xs">
+              キー
+              <select
+                className="ctl"
+                value={tunerKey ?? ''}
+                onChange={(e) => setTunerKey(e.target.value === '' ? null : Number(e.target.value))}
+              >
+                <option value="">なし</option>
+                {(['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).map(
+                  (n, i) => (
+                    <option key={n} value={i}>
+                      {n}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <p className="text-ink-dim text-xs">
+              マイクを開始して声を出すと、検出した音程がグラフに軌跡として表示されます。グラフ左の鍵盤をタップすると参照音が鳴ります。
+            </p>
+          </div>
         </Card>
       )}
       {mode === 'single' && (

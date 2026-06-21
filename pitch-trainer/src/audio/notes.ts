@@ -19,3 +19,10 @@ export const midiOf = (freq: number) => 69 + 12 * Math.log2(freq / 440)
 
 /** 黒鍵かどうか */
 export const isBlackKey = (midi: number) => noteName(midi).includes('#')
+
+/** メジャースケールのピッチクラス集合(キーのルート=0 からの半音オフセット) */
+const MAJOR_SCALE = new Set([0, 2, 4, 5, 7, 9, 11])
+
+/** MIDI ノートがキー(メジャースケール)のダイアトニック音かどうか。keyRoot は 0=C,1=C#,...,11=B */
+export const isInKey = (midi: number, keyRoot: number) =>
+  MAJOR_SCALE.has(((midi % 12) - keyRoot + 12) % 12)
