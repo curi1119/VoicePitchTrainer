@@ -27,8 +27,11 @@ export async function hasSampledPianoCache(): Promise<boolean> {
 }
 
 let piano: SplendidGrandPiano | null = null
+let pianoDry: SplendidGrandPiano | null = null
 let ready = false
+let readyDry = false
 let loading: Promise<void> | null = null
+let loadingDry: Promise<void> | null = null
 
 /**
  * サンプルのロードを開始する(初回のみ。2回目以降の呼び出しは同じ Promise を返す)。
@@ -59,7 +62,30 @@ export function loadSampledPiano(
   return loading
 }
 
+/**
+ * ドライ版(リバーブ控えめ)のロードを開始する。通常版のロード完了後に呼ぶ。
+ */
+export function loadSampledPianoDry(ctx: AudioContext): Promise<void> {
+  loadingDry ??= (async () => {
+    const compressor = ctx.createDynamicsCompressor()
+    compressor.connect(masterOut())
+    const boost = ctx.createGain()
+    boost.gain.value = SYNTH.SAMPLED_BOOST
+    boost.connect(compressor)
+    pianoDry = new SplendidGrandPiano(ctx, {
+      volume: SYNTH.SAMPLED_VOLUME,
+      decayTime: SYNTH.SAMPLED_DRY_DECAY_TIME,
+      destination: boost,
+      ...('caches' in window ? { storage: new CacheStorage(CACHE_NAME) } : {}),
+    })
+    await pianoDry.load
+    readyDry = true
+  })()
+  return loadingDry
+}
+
 export const isSampledPianoReady = () => ready
+export const isSampledPianoDryReady = () => readyDry
 
 /**
  * ロード済みならサンプルで鳴らして true を返す。
@@ -68,5 +94,16 @@ export const isSampledPianoReady = () => ready
 export function playSampledPiano(midi: number, dur: number): boolean {
   if (!ready || piano == null) return false
   piano.start({ note: midi, duration: dur, velocity: SYNTH.SAMPLED_VELOCITY })
+  return true
+}
+
+export function playSampledPianoDry(midi: number, dur: number): boolean {
+  if (!readyDry || pianoDry == null) return false
+  pianoDry.start({
+    note: midi,
+    duration: dur,
+    velocity: SYNTH.SAMPLED_VELOCITY,
+    lpfCutoffHz: SYNTH.SAMPLED_DRY_LPF,
+  })
   return true
 }

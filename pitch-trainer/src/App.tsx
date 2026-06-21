@@ -9,6 +9,7 @@ import { playFail, playSuccess, playTone, playTriad, type Timbre } from './audio
 import {
   hasSampledPianoCache,
   loadSampledPiano,
+  loadSampledPianoDry,
   type SampledPianoProgress,
 } from './audio/sampled-piano'
 import { SingleMode } from './modes/single'
@@ -222,7 +223,10 @@ export default function App() {
         timers.push(setTimeout(() => setOverlaySkippable(true), 5000))
       }
       loadSampledPiano(audioContext(), (p) => setLoadProgress({ ...p }))
-        .then(() => setSampledReady(true))
+        .then(() => {
+          setSampledReady(true)
+          return loadSampledPianoDry(audioContext())
+        })
         .catch((e) => console.warn('サンプルピアノのロードに失敗(合成ピアノで継続):', e))
         .finally(() => {
           clear()
@@ -554,7 +558,8 @@ export default function App() {
             value={timbre}
             onChange={(e) => setTimbre(e.target.value as Timbre)}
           >
-            <option value="sampled">{sampledReady ? 'ピアノ' : 'ピアノ(読込中)'}</option>
+            <option value="sampled">{sampledReady ? 'ピアノ1' : 'ピアノ1(読込中)'}</option>
+            <option value="sampled-dry">{sampledReady ? 'ピアノ2' : 'ピアノ2(読込中)'}</option>
             <option value="piano">ピアノ(合成)</option>
             <option value="beep">ビープ音</option>
           </select>

@@ -1,17 +1,27 @@
 import { SCALE, SYNTH } from '../config'
 import { freqOf } from './notes'
 import { audioContext, masterOut } from './output'
-import { loadSampledPiano, playSampledPiano } from './sampled-piano'
+import {
+  loadSampledPiano,
+  loadSampledPianoDry,
+  playSampledPiano,
+  playSampledPianoDry,
+} from './sampled-piano'
 
-export type Timbre = 'sampled' | 'piano' | 'beep'
+export type Timbre = 'sampled' | 'sampled-dry' | 'piano' | 'beep'
 
 /** 参照音・出題音・ガイド音の再生 */
 export function playTone(midi: number, timbre: Timbre, dur: number = SYNTH.DEFAULT_DUR) {
   const a = audioContext()
   if (timbre === 'sampled') {
     if (playSampledPiano(midi, dur)) return
-    // サンプル未ロード: ロードを開始しつつ、この音は合成ピアノで代替する
     void loadSampledPiano(a)
+    playSynthPiano(a, midi, dur)
+    return
+  }
+  if (timbre === 'sampled-dry') {
+    if (playSampledPianoDry(midi, dur)) return
+    void loadSampledPianoDry(a)
     playSynthPiano(a, midi, dur)
     return
   }

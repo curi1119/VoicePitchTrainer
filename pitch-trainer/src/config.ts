@@ -226,8 +226,8 @@ export const SYNTH = {
   PIANO_GAINS: [1, 0.45, 0.22, 0.11, 0.06, 0.03],
   /** わずかな不協和性: f * p * (1 + INHARMONICITY * p^2) */
   PIANO_INHARMONICITY: 0.0004,
-  PIANO_MASTER_GAIN: 0.22,
-  BEEP_GAIN: 0.25,
+  PIANO_MASTER_GAIN: 0.8,
+  BEEP_GAIN: 0.6,
   /** 参照音(鍵盤クリック等)のデフォルト長 秒 */
   DEFAULT_DUR: 0.9,
   /** マスター音量の初期値 0..1(ヘッダーのつまみ。localStorage に保存される) */
@@ -241,4 +241,8 @@ export const SYNTH = {
    * スマホのスピーカーで音量不足だったため増幅し、コンプレッサーで音割れを防ぐ(2026-06-13)
    */
   SAMPLED_BOOST: 1.6,
+  /** ピアノ2(ドライ): リリースを短くカットしてリバーブ感を抑える */
+  SAMPLED_DRY_DECAY_TIME: 0.4,
+  /** ピアノ2(ドライ): LPF で高域の残響成分を落とす (Hz) */
+  SAMPLED_DRY_LPF: 2800,
 } as const
