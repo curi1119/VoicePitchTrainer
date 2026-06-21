@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { PIANO } from '../config'
-import { isBlackKey, noteName, noteOct } from '../audio/notes'
+import { degreeLabel, isBlackKey, isInKey, noteName, noteOct } from '../audio/notes'
 
 interface KeyDef {
   midi: number
@@ -50,6 +50,10 @@ interface PianoProps {
   thickness?: number
   /** 鍵の長さ。横置きのみ有効('fill' は親の高さいっぱい) */
   length?: number | 'fill'
+  /** キー(0=C,...,11=B)。設定時は基音を青、スケール外を赤で塗る */
+  keyRoot?: number | null
+  /** 度数表記(I〜VII)を白鍵に表示する */
+  showDegree?: boolean
 }
 
 export function Piano({
@@ -59,6 +63,8 @@ export function Piano({
   vertical = false,
   thickness = PIANO.WHITE_W,
   length = 120,
+  keyRoot = null,
+  showDegree = false,
 }: PianoProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const keyEls = useRef(new Map<number, HTMLDivElement>())
@@ -123,17 +129,27 @@ export function Piano({
         {KEYS.map((k) => {
           const isSung = sung === k.midi
           const isPressed = pressed.has(k.midi)
+          const isRoot = keyRoot != null && k.midi % 12 === keyRoot
+          const isOffKey = keyRoot != null && !isInKey(k.midi, keyRoot)
           const bg = k.black
             ? isPressed
               ? 'bg-[#46566c]'
               : isSung
                 ? 'bg-blue'
-                : 'bg-[#222a33] hover:bg-[#3a4654]'
+                : isRoot
+                  ? 'bg-[#5ba8d0]'
+                  : isOffKey
+                    ? 'bg-[#8b3a3a]'
+                    : 'bg-[#222a33] hover:bg-[#3a4654]'
             : isPressed
               ? 'bg-[#cfc9b8]'
               : isSung
                 ? 'bg-blue'
-                : 'bg-[#f2f0ea] hover:bg-white'
+                : isRoot
+                  ? 'bg-[#a8d8f0]'
+                  : isOffKey
+                    ? 'bg-[#e8a0a0]'
+                    : 'bg-[#f2f0ea] hover:bg-white'
           const thick = k.black ? blackThick : thickness
           const posPx = k.pos * thickness
           const cls = k.black
@@ -183,13 +199,27 @@ export function Piano({
                 <span
                   className={
                     vertical
-                      ? 'pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 font-mono text-[10px] text-[#6a737d]'
+                      ? 'pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 -rotate-90 font-mono text-[10px] text-[#6a737d]'
                       : 'pointer-events-none absolute bottom-[3px] w-full text-center font-mono text-[8px] text-[#6a737d]'
                   }
                 >
                   {k.label}
                 </span>
               )}
+              {showDegree && keyRoot != null && (() => {
+                const deg = degreeLabel(k.midi, keyRoot)
+                return deg ? (
+                  <span
+                    className={
+                      vertical
+                        ? `pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 -rotate-90 font-mono text-[9px] font-bold ${k.black ? 'text-white/80' : 'text-[#4a7a9b]'}`
+                        : `pointer-events-none absolute top-[3px] w-full text-center font-mono text-[9px] font-bold ${k.black ? 'text-white/80' : 'text-[#4a7a9b]'}`
+                    }
+                  >
+                    {deg}
+                  </span>
+                ) : null
+              })()}
             </div>
           )
         })}

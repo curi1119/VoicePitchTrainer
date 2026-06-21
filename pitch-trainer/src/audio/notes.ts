@@ -26,3 +26,13 @@ const MAJOR_SCALE = new Set([0, 2, 4, 5, 7, 9, 11])
 /** MIDI ノートがキー(メジャースケール)のダイアトニック音かどうか。keyRoot は 0=C,1=C#,...,11=B */
 export const isInKey = (midi: number, keyRoot: number) =>
   MAJOR_SCALE.has(((midi % 12) - keyRoot + 12) % 12)
+
+const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11]
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'] as const
+
+/** スケール度数のローマ数字を返す。スケール外なら null */
+export function degreeLabel(midi: number, keyRoot: number): string | null {
+  const rel = ((midi % 12) - keyRoot + 12) % 12
+  const idx = MAJOR_INTERVALS.indexOf(rel)
+  return idx >= 0 ? ROMAN[idx] : null
+}

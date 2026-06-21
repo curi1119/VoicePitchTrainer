@@ -84,6 +84,7 @@ export default function App() {
     const n = Number(raw)
     return Number.isInteger(n) && n >= 0 && n <= 11 ? n : null
   })
+  const [showDegree, setShowDegree] = useState(() => loadBool('show-degree', false))
   const [mode, setMode] = useState<Mode>('tuner')
   /** 鍵盤の全画面表示(スマホで鍵を大きく出すための CSS オーバーレイ) */
   const [keyboardFull, setKeyboardFull] = useState(false)
@@ -179,6 +180,10 @@ export default function App() {
     if (tunerKey == null) localStorage.removeItem('tuner-key')
     else localStorage.setItem('tuner-key', String(tunerKey))
   }, [tunerKey])
+
+  useEffect(() => {
+    localStorage.setItem('show-degree', String(showDegree))
+  }, [showDegree])
 
   // 検出レンジをメインループ用 ref に反映(+ localStorage 保存)
   useEffect(() => {
@@ -505,6 +510,8 @@ export default function App() {
                 sung={sung}
                 target={target}
                 onPlay={(m) => playTone(m, timbre)}
+                keyRoot={tunerKey}
+                showDegree={showDegree}
               />
             </div>
           </div>
@@ -517,6 +524,8 @@ export default function App() {
                 sung={sung}
                 target={target}
                 onPlay={(m) => playTone(m, timbre)}
+                keyRoot={tunerKey}
+                showDegree={showDegree}
               />
             </div>
           </div>
@@ -631,10 +640,39 @@ export default function App() {
       {/* 鍵盤モード: 88鍵のみを画面いっぱいに表示(スマホは縦置き=低音が下) */}
       {mode === 'keyboard' && (
         <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
-          <div className="mb-1 flex justify-end">
-            <Button small onClick={() => setKeyboardFull(true)}>
-              ⛶ 全画面
-            </Button>
+          <div className="mb-1 flex items-center gap-2">
+            <label className="text-ink-dim flex items-center gap-1 text-xs">
+              キー
+              <select
+                className="ctl"
+                value={tunerKey ?? ''}
+                onChange={(e) => setTunerKey(e.target.value === '' ? null : Number(e.target.value))}
+              >
+                <option value="">なし</option>
+                {(['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).map(
+                  (n, i) => (
+                    <option key={n} value={i}>
+                      {n}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            {tunerKey != null && (
+              <label className="text-ink-dim text-[13px]">
+                <input
+                  type="checkbox"
+                  checked={showDegree}
+                  onChange={(e) => setShowDegree(e.target.checked)}
+                />{' '}
+                度数
+              </label>
+            )}
+            <span className="ml-auto">
+              <Button small onClick={() => setKeyboardFull(true)}>
+                ⛶ 全画面
+              </Button>
+            </span>
           </div>
           {/* 鍵が間延びしないよう長さに上限(実物のピアノ比)を設け、左右中央に置く */}
           <div className="min-h-0 flex-1 md:hidden">
@@ -645,6 +683,8 @@ export default function App() {
                 sung={sung}
                 target={target}
                 onPlay={(m) => playTone(m, timbre)}
+                keyRoot={tunerKey}
+                showDegree={showDegree}
               />
             </div>
           </div>
@@ -657,6 +697,8 @@ export default function App() {
                 sung={sung}
                 target={target}
                 onPlay={(m) => playTone(m, timbre)}
+                keyRoot={tunerKey}
+                showDegree={showDegree}
               />
             </div>
           </div>
@@ -683,6 +725,16 @@ export default function App() {
                 )}
               </select>
             </label>
+            {tunerKey != null && (
+              <label className="text-ink-dim text-[13px]">
+                <input
+                  type="checkbox"
+                  checked={showDegree}
+                  onChange={(e) => setShowDegree(e.target.checked)}
+                />{' '}
+                度数
+              </label>
+            )}
             <p className="text-ink-dim text-xs">
               マイクを開始して声を出すと、検出した音程がグラフに軌跡として表示されます。グラフ左の鍵盤をタップすると参照音が鳴ります。
             </p>
@@ -735,12 +787,12 @@ export default function App() {
           🎹 88鍵キーボードを表示
         </summary>
         <div className="border-line bg-panel mt-1 rounded-lg border p-2">
-          <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} />
+          <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} keyRoot={mode === 'tuner' ? tunerKey : null} showDegree={mode === 'tuner' && showDegree} />
         </div>
       </details>
       <div className={mode === 'keyboard' ? 'hidden' : 'hidden md:block'}>
         <Card title="Keyboard — A0 ~ C8 (88 keys)">
-          <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} />
+          <Piano sung={sung} target={target} onPlay={(m) => playTone(m, timbre)} keyRoot={mode === 'tuner' ? tunerKey : null} showDegree={mode === 'tuner' && showDegree} />
         </Card>
       </div>
     </div>
