@@ -1,4 +1,4 @@
-import { useImperativeHandle, useRef, type Ref } from 'react'
+import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import { GRAPH, METER, PIANO, PITCH } from '../config'
 import { freqOf, isBlackKey, isInKey, noteName, noteOct } from '../audio/notes'
 import { desiredRange, followRange, midiOfY, yOfMidi, type GraphRange } from './pitch-graph-math'
@@ -78,7 +78,9 @@ export function PitchGraph({
   const textRef = useRef({ at: 0, note: '—', oct: '', freq: '---.-', cents: '± --' })
   const pressedRef = useRef<{ midi: number; until: number } | null>(null)
   const keyRootRef = useRef(keyRoot)
-  keyRootRef.current = keyRoot
+  useEffect(() => {
+    keyRootRef.current = keyRoot
+  }, [keyRoot])
 
   useImperativeHandle(
     ref,
