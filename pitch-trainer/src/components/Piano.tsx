@@ -44,6 +44,8 @@ interface PianoProps {
   /** 目標音(オレンジ枠) */
   target: number | null
   onPlay(midi: number): void
+  /** キーを離したとき(ビープのサステイン停止用) */
+  onPlayStop?(): void
   /** 縦置き(スマホの鍵盤モード用)。低音が下・鍵は横いっぱいに伸びる */
   vertical?: boolean
   /** 白鍵の太さ px(横置き=鍵の幅 / 縦置き=鍵の高さ) */
@@ -60,6 +62,7 @@ export function Piano({
   sung,
   target,
   onPlay,
+  onPlayStop,
   vertical = false,
   thickness = PIANO.WHITE_W,
   length = 120,
@@ -194,6 +197,8 @@ export function Piano({
                   : {}),
               }}
               onPointerDown={() => press(k.midi)}
+              onPointerUp={() => onPlayStop?.()}
+              onPointerLeave={() => onPlayStop?.()}
             >
               {k.label != null && (
                 <span

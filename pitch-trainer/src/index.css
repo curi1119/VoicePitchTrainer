@@ -19,6 +19,8 @@
 @layer base {
   body {
     @apply bg-bg text-ink font-sans;
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 

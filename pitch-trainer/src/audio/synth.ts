@@ -34,18 +34,79 @@ export function playTone(midi: number, timbre: Timbre, dur: number = SYNTH.DEFAU
 
 function playBeep(a: AudioContext, midi: number, dur: number) {
   const t = a.currentTime
+  const f = freqOf(midi)
   const master = a.createGain()
   master.connect(masterOut())
-  const o = a.createOscillator()
-  o.type = 'sine'
-  o.frequency.value = freqOf(midi)
-  o.connect(master)
+  const o1 = a.createOscillator()
+  o1.type = 'sine'
+  o1.frequency.value = f
+  const o2 = a.createOscillator()
+  o2.type = 'square'
+  o2.frequency.value = f
+  const g1 = a.createGain()
+  const g2 = a.createGain()
+  g1.gain.value = 0.7
+  g2.gain.value = 0.15
+  o1.connect(g1)
+  o2.connect(g2)
+  g1.connect(master)
+  g2.connect(master)
   master.gain.setValueAtTime(0, t)
-  master.gain.linearRampToValueAtTime(SYNTH.BEEP_GAIN, t + 0.01)
-  master.gain.setValueAtTime(SYNTH.BEEP_GAIN, t + dur - 0.08)
+  master.gain.linearRampToValueAtTime(SYNTH.BEEP_GAIN, t + 0.005)
+  master.gain.setValueAtTime(SYNTH.BEEP_GAIN, t + dur - 0.05)
   master.gain.linearRampToValueAtTime(0.0001, t + dur)
-  o.start(t)
-  o.stop(t + dur)
+  o1.start(t)
+  o1.stop(t + dur)
+  o2.start(t)
+  o2.stop(t + dur)
+}
+
+let activeBeep: { master: GainNode; o1: OscillatorNode; o2: OscillatorNode } | null = null
+
+function stopActiveBeep() {
+  if (!activeBeep) return
+  const { master, o1, o2 } = activeBeep
+  const t = master.context.currentTime
+  master.gain.cancelScheduledValues(t)
+  master.gain.setValueAtTime(master.gain.value, t)
+  master.gain.linearRampToValueAtTime(0.0001, t + 0.03)
+  o1.stop(t + 0.04)
+  o2.stop(t + 0.04)
+  activeBeep = null
+}
+
+/** ビープをサステインで鳴らし始める(鍵盤の長押し用)。前の音は自動で消える */
+export function startBeep(midi: number) {
+  stopActiveBeep()
+  const a = audioContext()
+  const t = a.currentTime
+  const f = freqOf(midi)
+  const master = a.createGain()
+  master.connect(masterOut())
+  const o1 = a.createOscillator()
+  o1.type = 'sine'
+  o1.frequency.value = f
+  const o2 = a.createOscillator()
+  o2.type = 'square'
+  o2.frequency.value = f
+  const g1 = a.createGain()
+  const g2 = a.createGain()
+  g1.gain.value = 0.7
+  g2.gain.value = 0.15
+  o1.connect(g1)
+  o2.connect(g2)
+  g1.connect(master)
+  g2.connect(master)
+  master.gain.setValueAtTime(0, t)
+  master.gain.linearRampToValueAtTime(SYNTH.BEEP_GAIN, t + 0.005)
+  o1.start(t)
+  o2.start(t)
+  activeBeep = { master, o1, o2 }
+}
+
+/** サステイン中のビープを止める */
+export function stopBeep() {
+  stopActiveBeep()
 }
 
 /** 簡易ピアノ: 倍音加算 + 減衰エンベロープ(サンプル未ロード時のフォールバック兼比較用) */
@@ -55,13 +116,19 @@ function playSynthPiano(a: AudioContext, midi: number, dur: number) {
   const master = a.createGain()
   master.connect(masterOut())
   master.gain.setValueAtTime(SYNTH.PIANO_MASTER_GAIN, t)
+  // 低音(C4=60 以下)では上位倍音を強調しスマホスピーカーでも聞こえるようにする
+  const boost = midi < 60 ? Math.min(3, (60 - midi) / 12) : 0
   SYNTH.PIANO_PARTIALS.forEach((p, i) => {
+    const hf = f * p * (1 + SYNTH.PIANO_INHARMONICITY * p * p)
+    if (hf > 16000) return
     const o = a.createOscillator()
     const g = a.createGain()
     o.type = 'sine'
-    o.frequency.value = f * p * (1 + SYNTH.PIANO_INHARMONICITY * p * p) // わずかな不協和性
+    o.frequency.value = hf
+    const baseGain = SYNTH.PIANO_GAINS[i]
+    const gain = i === 0 ? baseGain : baseGain * (1 + boost * (i / 2))
     g.gain.setValueAtTime(0, t)
-    g.gain.linearRampToValueAtTime(SYNTH.PIANO_GAINS[i], t + 0.004)
+    g.gain.linearRampToValueAtTime(gain, t + 0.004)
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur * (1.6 - i * 0.15))
     o.connect(g)
     g.connect(master)

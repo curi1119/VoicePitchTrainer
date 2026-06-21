@@ -236,8 +236,8 @@ export const SYNTH = {
   PIANO_GAINS: [1, 0.45, 0.22, 0.11, 0.06, 0.03],
   /** わずかな不協和性: f * p * (1 + INHARMONICITY * p^2) */
   PIANO_INHARMONICITY: 0.0004,
-  PIANO_MASTER_GAIN: 0.8,
-  BEEP_GAIN: 0.6,
+  PIANO_MASTER_GAIN: 1.0,
+  BEEP_GAIN: 0.8,
   /** 参照音(鍵盤クリック等)のデフォルト長 秒 */
   DEFAULT_DUR: 0.9,
   /** マスター音量の初期値 0..1(ヘッダーのつまみ。localStorage に保存される) */

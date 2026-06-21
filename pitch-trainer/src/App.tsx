@@ -5,7 +5,15 @@ import { describeMicError, openMic, type MicErrorInfo, type MicInput } from './a
 import { detectPitch } from './audio/pitch-detector'
 import { PitchTracker } from './audio/smoothing'
 import { audioContext, setMasterVolume } from './audio/output'
-import { playFail, playSuccess, playTone, playTriad, type Timbre } from './audio/synth'
+import {
+  playFail,
+  playSuccess,
+  playTone,
+  playTriad,
+  startBeep,
+  stopBeep,
+  type Timbre,
+} from './audio/synth'
 import {
   hasSampledPianoCache,
   loadSampledPiano,
@@ -455,6 +463,14 @@ export default function App() {
     if (!on) clearTimeout(autoTimerRef.current)
   }
 
+  function handleKeyPlay(midi: number) {
+    if (timbre === 'beep') startBeep(midi)
+    else playTone(midi, timbre)
+  }
+  function handleKeyStop() {
+    if (timbre === 'beep') stopBeep()
+  }
+
   function handleScaleStart() {
     if (!micOn) {
       alert('先にマイクを開始してください')
@@ -509,7 +525,8 @@ export default function App() {
                 thickness={48}
                 sung={sung}
                 target={target}
-                onPlay={(m) => playTone(m, timbre)}
+                onPlay={handleKeyPlay}
+                onPlayStop={handleKeyStop}
                 keyRoot={tunerKey}
                 showDegree={showDegree}
               />
@@ -523,7 +540,8 @@ export default function App() {
                 length="fill"
                 sung={sung}
                 target={target}
-                onPlay={(m) => playTone(m, timbre)}
+                onPlay={handleKeyPlay}
+                onPlayStop={handleKeyStop}
                 keyRoot={tunerKey}
                 showDegree={showDegree}
               />
@@ -680,7 +698,8 @@ export default function App() {
                 thickness={40}
                 sung={sung}
                 target={target}
-                onPlay={(m) => playTone(m, timbre)}
+                onPlay={handleKeyPlay}
+                onPlayStop={handleKeyStop}
                 keyRoot={tunerKey}
                 showDegree={showDegree}
               />
@@ -694,7 +713,8 @@ export default function App() {
                 length="fill"
                 sung={sung}
                 target={target}
-                onPlay={(m) => playTone(m, timbre)}
+                onPlay={handleKeyPlay}
+                onPlayStop={handleKeyStop}
                 keyRoot={tunerKey}
                 showDegree={showDegree}
               />
@@ -788,7 +808,8 @@ export default function App() {
           <Piano
             sung={sung}
             target={target}
-            onPlay={(m) => playTone(m, timbre)}
+            onPlay={handleKeyPlay}
+                onPlayStop={handleKeyStop}
             keyRoot={mode === 'tuner' ? tunerKey : null}
             showDegree={mode === 'tuner' && showDegree}
           />
@@ -799,7 +820,8 @@ export default function App() {
           <Piano
             sung={sung}
             target={target}
-            onPlay={(m) => playTone(m, timbre)}
+            onPlay={handleKeyPlay}
+                onPlayStop={handleKeyStop}
             keyRoot={mode === 'tuner' ? tunerKey : null}
             showDegree={mode === 'tuner' && showDegree}
           />
