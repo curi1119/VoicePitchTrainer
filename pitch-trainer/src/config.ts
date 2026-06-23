@@ -174,7 +174,7 @@ export const SCALE = {
   LEAD_IN_BEATS_GUIDE: 2.5,
   LEAD_IN_BEATS_NO_GUIDE: 0.5,
   /** ラウンド間の待ち(拍) */
-  ROUND_GAP_BEATS: 2,
+  ROUND_GAP_BEATS: 1,
   /** 開始音プルダウンのレンジ (MIDI) と初期値 (C3) */
   BASE_MIN: 36,
   BASE_MAX: 72,
