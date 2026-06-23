@@ -721,11 +721,12 @@ export default function App() {
       {/* 鍵盤モード: 88鍵のみを画面いっぱいに表示(スマホは縦置き=低音が下) */}
       {mode === 'keyboard' && (
         <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
-          <div className="mb-1 flex items-center gap-2">
+          <div className="mb-1 flex items-center gap-1.5 sm:gap-2">
             <label className="text-ink-dim flex items-center gap-1 text-xs">
-              キー
+              <span className="hidden sm:inline">キー</span>
               <select
-                className="ctl"
+                className="ctl w-16 sm:w-auto"
+                aria-label="キー"
                 value={tunerKey ?? ''}
                 onChange={(e) => {
                   const v = e.target.value === '' ? null : Number(e.target.value)
@@ -733,7 +734,7 @@ export default function App() {
                   gtag('event', 'change_key', { value: v })
                 }}
               >
-                <option value="">なし</option>
+                <option value="">キー: なし</option>
                 {(['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).map(
                   (n, i) => (
                     <option key={n} value={i}>
@@ -746,9 +747,10 @@ export default function App() {
             {tunerKey != null && (
               <>
                 <label className="text-ink-dim flex items-center gap-1 text-xs">
-                  スケール
+                  <span className="hidden sm:inline">スケール</span>
                   <select
                     className="ctl"
+                    aria-label="スケール"
                     value={scaleType}
                     onChange={(e) => {
                       const v = e.target.value as ScaleType
