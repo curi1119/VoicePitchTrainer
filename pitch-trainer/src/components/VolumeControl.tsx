@@ -4,6 +4,7 @@ interface VolumeControlProps {
   /** マスター音量 0..1 */
   volume: number
   onChange(volume: number): void
+  onCommit?(): void
 }
 
 /**
@@ -11,7 +12,7 @@ interface VolumeControlProps {
  * スマホでは小さなインラインスライダーが操作困難(+ドラッグがスクロールに横取りされる)
  * だったため、ボタン → 幅広スライダーのポップオーバー方式にする。sm 以上はインライン表示。
  */
-export function VolumeControl({ volume, onChange }: VolumeControlProps) {
+export function VolumeControl({ volume, onChange, onCommit }: VolumeControlProps) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLSpanElement>(null)
 
@@ -34,6 +35,7 @@ export function VolumeControl({ volume, onChange }: VolumeControlProps) {
       step={0.05}
       value={volume}
       onChange={(e) => onChange(Number(e.target.value))}
+      onPointerUp={() => onCommit?.()}
     />
   )
 

@@ -4,6 +4,7 @@ interface SensitivityControlProps {
   /** 感度 0..1(0=鈍感 … 1=敏感) */
   sensitivity: number
   onChange(sensitivity: number): void
+  onCommit?(): void
 }
 
 /** 0..1 を 5段階の目安ラベルに */
@@ -20,7 +21,7 @@ function label(s: number): string {
  * スマホはボタン+幅広スライダーのポップオーバー、sm 以上はインライン。
  * 敏感(右)ほど小さな声を拾うがノイズも拾いやすい。
  */
-export function SensitivityControl({ sensitivity, onChange }: SensitivityControlProps) {
+export function SensitivityControl({ sensitivity, onChange, onCommit }: SensitivityControlProps) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLSpanElement>(null)
 
@@ -43,6 +44,7 @@ export function SensitivityControl({ sensitivity, onChange }: SensitivityControl
       step={0.02}
       value={sensitivity}
       onChange={(e) => onChange(Number(e.target.value))}
+      onPointerUp={() => onCommit?.()}
     />
   )
 

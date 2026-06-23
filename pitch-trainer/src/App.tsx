@@ -388,12 +388,33 @@ export default function App() {
       micRef.current = await openMic(audioContext())
       setMicOn(true)
       setMicError(null)
+      gtag('event', 'start_mic')
     } catch (e) {
       setMicError(describeMicError(e))
     }
   }
 
+  const sessionStartRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') endSession()
+    }
+    document.addEventListener('visibilitychange', onHidden)
+    return () => document.removeEventListener('visibilitychange', onHidden)
+  }, [])
+
+  function endSession() {
+    const start = sessionStartRef.current
+    if (start == null) return
+    const sec = Math.round((performance.now() - start) / 1000)
+    gtag('event', 'session_end', { mode: modeRef.current, duration_sec: sec })
+    sessionStartRef.current = null
+  }
+
   function switchMode(m: Mode) {
+    endSession()
+    gtag('event', 'select_tab', { tab_name: m })
     setMode(m)
     modeRef.current = m
     if (m !== 'keyboard') setKeyboardFull(false)
@@ -441,6 +462,14 @@ export default function App() {
     }
     clearTimeout(autoTimerRef.current) // 手動出題は保留中の自動出題をキャンセル
     const t = singleRef.current.startQuiz(low, high, performance.now())
+    gtag('event', 'start_quiz', {
+      preset,
+      low,
+      high,
+      hide_tuner: hideTuner,
+      auto_quiz: autoQuiz,
+    })
+    sessionStartRef.current = performance.now()
     setQuizDisabled(true)
     clearTimeout(quizLockRef.current)
     quizLockRef.current = setTimeout(() => setQuizDisabled(false), 3000)
@@ -487,6 +516,15 @@ export default function App() {
       alert('先にマイクを開始してください')
       return
     }
+    gtag('event', 'start_scale', {
+      pattern: patternKey,
+      base: scaleBase,
+      bpm,
+      guide: guideOn,
+      round_count: roundCount,
+      turnaround,
+    })
+    sessionStartRef.current = performance.now()
     scaleRef.current?.start(scaleBase)
   }
 
@@ -584,15 +622,24 @@ export default function App() {
               setVolume(v)
               localStorage.setItem('master-volume', String(v))
             }}
+            onCommit={() => gtag('event', 'change_volume', { value: volume })}
           />
-          <SensitivityControl sensitivity={sensitivity} onChange={setSensitivity} />
+          <SensitivityControl
+            sensitivity={sensitivity}
+            onChange={setSensitivity}
+            onCommit={() => gtag('event', 'change_sensitivity', { value: sensitivity })}
+          />
           <span className="flex items-center gap-1">
             <select
               aria-label="音域(検出する声の高さ)"
               title="検出する声の高さの範囲。大声で低音が高い音に化ける場合は声に合った音域を選ぶと改善します"
               className="ctl"
               value={detectRange}
-              onChange={(e) => setDetectRange(e.target.value as DetectRangeKey)}
+              onChange={(e) => {
+                const v = e.target.value as DetectRangeKey
+                setDetectRange(v)
+                gtag('event', 'change_detect_range', { value: v })
+              }}
             >
               <option value="male">男性</option>
               <option value="female">女性</option>
@@ -609,7 +656,11 @@ export default function App() {
             aria-label="音色"
             className="ctl"
             value={timbre}
-            onChange={(e) => setTimbre(e.target.value as Timbre)}
+            onChange={(e) => {
+              const v = e.target.value as Timbre
+              setTimbre(v)
+              gtag('event', 'change_timbre', { value: v })
+            }}
           >
             <option value="sampled">{sampledReady ? 'ピアノ1' : 'ピアノ1(読込中)'}</option>
             <option value="sampled-dry">{sampledReady ? 'ピアノ2' : 'ピアノ2(読込中)'}</option>
@@ -676,7 +727,11 @@ export default function App() {
               <select
                 className="ctl"
                 value={tunerKey ?? ''}
-                onChange={(e) => setTunerKey(e.target.value === '' ? null : Number(e.target.value))}
+                onChange={(e) => {
+                  const v = e.target.value === '' ? null : Number(e.target.value)
+                  setTunerKey(v)
+                  gtag('event', 'change_key', { value: v })
+                }}
               >
                 <option value="">なし</option>
                 {(['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).map(
@@ -695,7 +750,11 @@ export default function App() {
                   <select
                     className="ctl"
                     value={scaleType}
-                    onChange={(e) => setScaleType(e.target.value as ScaleType)}
+                    onChange={(e) => {
+                      const v = e.target.value as ScaleType
+                      setScaleType(v)
+                      gtag('event', 'change_scale_type', { value: v })
+                    }}
                   >
                     {SCALE_TYPES.map(([val, label]) => (
                       <option key={val} value={val}>
@@ -708,7 +767,10 @@ export default function App() {
                   <input
                     type="checkbox"
                     checked={showDegree}
-                    onChange={(e) => setShowDegree(e.target.checked)}
+                    onChange={(e) => {
+                      setShowDegree(e.target.checked)
+                      gtag('event', 'toggle_degree', { value: e.target.checked })
+                    }}
                   />{' '}
                   度数
                 </label>
@@ -763,7 +825,11 @@ export default function App() {
               <select
                 className="ctl"
                 value={tunerKey ?? ''}
-                onChange={(e) => setTunerKey(e.target.value === '' ? null : Number(e.target.value))}
+                onChange={(e) => {
+                  const v = e.target.value === '' ? null : Number(e.target.value)
+                  setTunerKey(v)
+                  gtag('event', 'change_key', { value: v })
+                }}
               >
                 <option value="">なし</option>
                 {(['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const).map(
@@ -782,7 +848,11 @@ export default function App() {
                   <select
                     className="ctl"
                     value={scaleType}
-                    onChange={(e) => setScaleType(e.target.value as ScaleType)}
+                    onChange={(e) => {
+                      const v = e.target.value as ScaleType
+                      setScaleType(v)
+                      gtag('event', 'change_scale_type', { value: v })
+                    }}
                   >
                     {SCALE_TYPES.map(([val, label]) => (
                       <option key={val} value={val}>
@@ -795,7 +865,10 @@ export default function App() {
                   <input
                     type="checkbox"
                     checked={showDegree}
-                    onChange={(e) => setShowDegree(e.target.checked)}
+                    onChange={(e) => {
+                      setShowDegree(e.target.checked)
+                      gtag('event', 'toggle_degree', { value: e.target.checked })
+                    }}
                   />{' '}
                   度数
                 </label>
