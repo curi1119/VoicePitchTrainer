@@ -68,14 +68,15 @@ describe('ScaleMode', () => {
     expect(rec.tones[0]).toEqual([48, 0.95]) // 1拍の95%
   })
 
-  it('ガイド OFF はトライアドをスキップして半拍で開始する', () => {
+  it('ガイド OFF はトライアドをスキップして半拍で開始し、各音のガイド音は鳴らす', () => {
     const { deps, rec } = makeDeps({ guide: false })
     const m = new ScaleMode(deps)
     m.start(48)
     expect(rec.triads).toHaveLength(0)
     vi.advanceTimersByTime(500)
     expect(rec.chipStates[0]).toEqual([0, 'now'])
-    expect(rec.tones).toHaveLength(0) // ガイド音も鳴らさない
+    expect(rec.tones).toHaveLength(1) // 各音のガイド音は再生する
+    expect(rec.tones[0]).toEqual([48, 0.95])
   })
 
   it('±60セント以内のフレームが max(6, voiced*0.35) 以上で合格', () => {
