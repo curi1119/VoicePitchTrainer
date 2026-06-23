@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { PIANO } from '../config'
-import { degreeLabel, isBlackKey, isInKey, noteName, noteOct } from '../audio/notes'
+import { degreeLabel, isBlackKey, isInKey, noteName, noteOct, type ScaleType } from '../audio/notes'
 
 interface KeyDef {
   midi: number
@@ -54,6 +54,8 @@ interface PianoProps {
   length?: number | 'fill'
   /** キー(0=C,...,11=B)。設定時は基音を青、スケール外を赤で塗る */
   keyRoot?: number | null
+  /** スケールタイプ */
+  scaleType?: ScaleType
   /** 度数表記(I〜VII)を白鍵に表示する */
   showDegree?: boolean
 }
@@ -67,6 +69,7 @@ export function Piano({
   thickness = PIANO.WHITE_W,
   length = 120,
   keyRoot = null,
+  scaleType = 'major',
   showDegree = false,
 }: PianoProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -133,7 +136,7 @@ export function Piano({
           const isSung = sung === k.midi
           const isPressed = pressed.has(k.midi)
           const isRoot = keyRoot != null && k.midi % 12 === keyRoot
-          const isOffKey = keyRoot != null && !isInKey(k.midi, keyRoot)
+          const isOffKey = keyRoot != null && !isInKey(k.midi, keyRoot, scaleType)
           const bg = k.black
             ? isPressed
               ? 'bg-[#46566c]'
@@ -142,7 +145,7 @@ export function Piano({
                 : isRoot
                   ? 'bg-[#5ba8d0]'
                   : isOffKey
-                    ? 'bg-[#8b3a3a]'
+                    ? 'bg-[#e8a0a0]'
                     : 'bg-[#222a33] hover:bg-[#3a4654]'
             : isPressed
               ? 'bg-[#cfc9b8]'
@@ -214,13 +217,13 @@ export function Piano({
               {showDegree &&
                 keyRoot != null &&
                 (() => {
-                  const deg = degreeLabel(k.midi, keyRoot)
+                  const deg = degreeLabel(k.midi, keyRoot, scaleType)
                   return deg ? (
                     <span
                       className={
                         vertical
-                          ? `pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 -rotate-90 font-mono text-[9px] font-bold ${k.black ? 'text-white/80' : 'text-[#4a7a9b]'}`
-                          : `pointer-events-none absolute top-[3px] w-full text-center font-mono text-[9px] font-bold ${k.black ? 'text-white/80' : 'text-[#4a7a9b]'}`
+                          ? `pointer-events-none absolute top-1/2 -translate-y-1/2 -rotate-90 font-mono text-[9px] font-bold ${k.black ? 'right-[3px] text-white/80' : 'left-[62%] text-[#4a7a9b]'}`
+                          : `pointer-events-none absolute w-full text-center font-mono text-[9px] font-bold ${k.black ? 'bottom-[3px] text-white/80' : 'top-[62%] text-[#4a7a9b]'}`
                       }
                     >
                       {deg}

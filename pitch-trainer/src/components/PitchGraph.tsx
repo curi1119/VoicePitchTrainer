@@ -1,6 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import { GRAPH, METER, PIANO, PITCH } from '../config'
-import { freqOf, isBlackKey, isInKey, noteName, noteOct } from '../audio/notes'
+import { freqOf, isBlackKey, isInKey, noteName, noteOct, type ScaleType } from '../audio/notes'
 import { desiredRange, followRange, midiOfY, yOfMidi, type GraphRange } from './pitch-graph-math'
 
 /** 1フレームぶんの入力(メインループから毎フレーム渡す) */
@@ -63,12 +63,15 @@ const PRESS_MS = 180
 export function PitchGraph({
   onPlayNote,
   keyRoot = null,
+  scaleType = 'major',
   ref,
   className = '',
 }: {
   onPlayNote(midi: number): void
   /** 選択中のキー(0=C,...,11=B)。null ならキー判定なし */
   keyRoot?: number | null
+  /** スケールタイプ */
+  scaleType?: ScaleType
   ref?: Ref<PitchGraphHandle>
   className?: string
 }) {
@@ -78,9 +81,13 @@ export function PitchGraph({
   const textRef = useRef({ at: 0, note: '—', oct: '', freq: '---.-', cents: '± --' })
   const pressedRef = useRef<{ midi: number; until: number } | null>(null)
   const keyRootRef = useRef(keyRoot)
+  const scaleTypeRef = useRef(scaleType)
   useEffect(() => {
     keyRootRef.current = keyRoot
   }, [keyRoot])
+  useEffect(() => {
+    scaleTypeRef.current = scaleType
+  }, [scaleType])
 
   useImperativeHandle(
     ref,
@@ -202,8 +209,11 @@ export function PitchGraph({
           if (p.midi != null && prev && prev.midi != null) {
             const inZone = p.target != null && Math.abs(p.midi - p.target) * 100 <= p.tol
             const kr = keyRootRef.current
+            const st = scaleTypeRef.current
             const freeColor =
-              kr != null && !isInKey(Math.round(p.midi), kr) ? COLORS.traceOffKey : COLORS.traceFree
+              kr != null && !isInKey(Math.round(p.midi), kr, st)
+                ? COLORS.traceOffKey
+                : COLORS.traceFree
             c.strokeStyle = p.target == null ? freeColor : inZone ? COLORS.traceIn : COLORS.traceOut
             c.beginPath()
             c.moveTo(Math.max(kw, xOf(prev.t)), yOfMidi(prev.midi, range, h))

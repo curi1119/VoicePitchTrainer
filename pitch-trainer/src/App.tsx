@@ -20,6 +20,7 @@ import {
   loadSampledPianoDry,
   type SampledPianoProgress,
 } from './audio/sampled-piano'
+import { SCALE_TYPES, type ScaleType } from './audio/notes'
 import { SingleMode } from './modes/single'
 import { ScaleMode, type PatternKey } from './modes/scale'
 import { JudgeBar, type JudgeBarHandle } from './components/JudgeBar'
@@ -92,6 +93,13 @@ export default function App() {
     const n = Number(raw)
     return Number.isInteger(n) && n >= 0 && n <= 11 ? n : null
   })
+  const [scaleType, setScaleType] = useState<ScaleType>(() =>
+    loadEnum(
+      'scale-type',
+      ['major', 'natural-minor', 'harmonic-minor', 'melodic-minor'] as const,
+      'major',
+    ),
+  )
   const [showDegree, setShowDegree] = useState(() => loadBool('show-degree', false))
   const [mode, setMode] = useState<Mode>('tuner')
   /** 鍵盤の全画面表示(スマホで鍵を大きく出すための CSS オーバーレイ) */
@@ -189,6 +197,9 @@ export default function App() {
     else localStorage.setItem('tuner-key', String(tunerKey))
   }, [tunerKey])
 
+  useEffect(() => {
+    localStorage.setItem('scale-type', scaleType)
+  }, [scaleType])
   useEffect(() => {
     localStorage.setItem('show-degree', String(showDegree))
   }, [showDegree])
@@ -528,6 +539,7 @@ export default function App() {
                 onPlay={handleKeyPlay}
                 onPlayStop={handleKeyStop}
                 keyRoot={tunerKey}
+                scaleType={scaleType}
                 showDegree={showDegree}
               />
             </div>
@@ -543,6 +555,7 @@ export default function App() {
                 onPlay={handleKeyPlay}
                 onPlayStop={handleKeyStop}
                 keyRoot={tunerKey}
+                scaleType={scaleType}
                 showDegree={showDegree}
               />
             </div>
@@ -637,6 +650,7 @@ export default function App() {
               ref={graphRef}
               className="min-h-[180px] w-full flex-1"
               keyRoot={mode === 'tuner' ? tunerKey : null}
+              scaleType={scaleType}
               onPlayNote={(m) => playTone(m, timbre)}
             />
             {mode === 'single' && tunerCovered && (
@@ -675,14 +689,30 @@ export default function App() {
               </select>
             </label>
             {tunerKey != null && (
-              <label className="text-ink-dim text-[13px]">
-                <input
-                  type="checkbox"
-                  checked={showDegree}
-                  onChange={(e) => setShowDegree(e.target.checked)}
-                />{' '}
-                度数
-              </label>
+              <>
+                <label className="text-ink-dim flex items-center gap-1 text-xs">
+                  スケール
+                  <select
+                    className="ctl"
+                    value={scaleType}
+                    onChange={(e) => setScaleType(e.target.value as ScaleType)}
+                  >
+                    {SCALE_TYPES.map(([val, label]) => (
+                      <option key={val} value={val}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-ink-dim text-[13px]">
+                  <input
+                    type="checkbox"
+                    checked={showDegree}
+                    onChange={(e) => setShowDegree(e.target.checked)}
+                  />{' '}
+                  度数
+                </label>
+              </>
             )}
             <span className="ml-auto">
               <Button small onClick={() => setKeyboardFull(true)}>
@@ -701,6 +731,7 @@ export default function App() {
                 onPlay={handleKeyPlay}
                 onPlayStop={handleKeyStop}
                 keyRoot={tunerKey}
+                scaleType={scaleType}
                 showDegree={showDegree}
               />
             </div>
@@ -716,6 +747,7 @@ export default function App() {
                 onPlay={handleKeyPlay}
                 onPlayStop={handleKeyStop}
                 keyRoot={tunerKey}
+                scaleType={scaleType}
                 showDegree={showDegree}
               />
             </div>
@@ -744,14 +776,30 @@ export default function App() {
               </select>
             </label>
             {tunerKey != null && (
-              <label className="text-ink-dim text-[13px]">
-                <input
-                  type="checkbox"
-                  checked={showDegree}
-                  onChange={(e) => setShowDegree(e.target.checked)}
-                />{' '}
-                度数
-              </label>
+              <>
+                <label className="text-ink-dim flex items-center gap-1 text-xs">
+                  スケール
+                  <select
+                    className="ctl"
+                    value={scaleType}
+                    onChange={(e) => setScaleType(e.target.value as ScaleType)}
+                  >
+                    {SCALE_TYPES.map(([val, label]) => (
+                      <option key={val} value={val}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-ink-dim text-[13px]">
+                  <input
+                    type="checkbox"
+                    checked={showDegree}
+                    onChange={(e) => setShowDegree(e.target.checked)}
+                  />{' '}
+                  度数
+                </label>
+              </>
             )}
             <p className="text-ink-dim text-xs">
               マイクを開始して声を出すと、検出した音程がグラフに軌跡として表示されます。グラフ左の鍵盤をタップすると参照音が鳴ります。
@@ -809,8 +857,9 @@ export default function App() {
             sung={sung}
             target={target}
             onPlay={handleKeyPlay}
-                onPlayStop={handleKeyStop}
+            onPlayStop={handleKeyStop}
             keyRoot={mode === 'tuner' ? tunerKey : null}
+            scaleType={scaleType}
             showDegree={mode === 'tuner' && showDegree}
           />
         </div>
@@ -821,8 +870,9 @@ export default function App() {
             sung={sung}
             target={target}
             onPlay={handleKeyPlay}
-                onPlayStop={handleKeyStop}
+            onPlayStop={handleKeyStop}
             keyRoot={mode === 'tuner' ? tunerKey : null}
+            scaleType={scaleType}
             showDegree={mode === 'tuner' && showDegree}
           />
         </Card>

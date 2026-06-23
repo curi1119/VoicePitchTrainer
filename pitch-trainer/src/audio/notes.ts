@@ -20,19 +20,40 @@ export const midiOf = (freq: number) => 69 + 12 * Math.log2(freq / 440)
 /** 黒鍵かどうか */
 export const isBlackKey = (midi: number) => noteName(midi).includes('#')
 
-/** メジャースケールのピッチクラス集合(キーのルート=0 からの半音オフセット) */
-const MAJOR_SCALE = new Set([0, 2, 4, 5, 7, 9, 11])
+export type ScaleType = 'major' | 'natural-minor' | 'harmonic-minor' | 'melodic-minor'
 
-/** MIDI ノートがキー(メジャースケール)のダイアトニック音かどうか。keyRoot は 0=C,1=C#,...,11=B */
-export const isInKey = (midi: number, keyRoot: number) =>
-  MAJOR_SCALE.has(((midi % 12) - keyRoot + 12) % 12)
+export const SCALE_TYPES: ReadonlyArray<readonly [ScaleType, string]> = [
+  ['major', 'Major'],
+  ['natural-minor', 'Minor (Natural)'],
+  ['harmonic-minor', 'Minor (Harmonic)'],
+  ['melodic-minor', 'Minor (Melodic)'],
+] as const
 
-const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11]
+const SCALE_INTERVALS: Record<ScaleType, readonly number[]> = {
+  major: [0, 2, 4, 5, 7, 9, 11],
+  'natural-minor': [0, 2, 3, 5, 7, 8, 10],
+  'harmonic-minor': [0, 2, 3, 5, 7, 8, 11],
+  'melodic-minor': [0, 2, 3, 5, 7, 9, 11],
+}
+
+const SCALE_SETS = Object.fromEntries(
+  Object.entries(SCALE_INTERVALS).map(([k, v]) => [k, new Set(v)]),
+) as unknown as Record<ScaleType, ReadonlySet<number>>
+
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'] as const
 
+/** MIDI ノートがキーのダイアトニック音かどうか。keyRoot は 0=C,1=C#,...,11=B */
+export const isInKey = (midi: number, keyRoot: number, scale: ScaleType = 'major') =>
+  SCALE_SETS[scale].has(((midi % 12) - keyRoot + 12) % 12)
+
 /** スケール度数のローマ数字を返す。スケール外なら null */
-export function degreeLabel(midi: number, keyRoot: number): string | null {
+export function degreeLabel(
+  midi: number,
+  keyRoot: number,
+  scale: ScaleType = 'major',
+): string | null {
   const rel = ((midi % 12) - keyRoot + 12) % 12
-  const idx = MAJOR_INTERVALS.indexOf(rel)
+  const intervals = SCALE_INTERVALS[scale]
+  const idx = intervals.indexOf(rel)
   return idx >= 0 ? ROMAN[idx] : null
 }
