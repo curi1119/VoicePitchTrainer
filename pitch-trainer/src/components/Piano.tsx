@@ -222,8 +222,8 @@ export function Piano({
                     <span
                       className={
                         vertical
-                          ? `pointer-events-none absolute top-1/2 -translate-y-1/2 -rotate-90 font-mono text-[9px] font-bold ${k.black ? 'right-[3px] text-white/80' : 'left-[62%] text-[#4a7a9b]'}`
-                          : `pointer-events-none absolute w-full text-center font-mono text-[9px] font-bold ${k.black ? 'bottom-[3px] text-white/80' : 'top-[62%] text-[#4a7a9b]'}`
+                          ? `pointer-events-none absolute top-1/2 -translate-y-1/2 -rotate-90 font-mono text-[9px] font-bold ${k.black ? 'left-[calc(62%+12px)] text-[#4a7a9b]' : 'left-[calc(62%+12px)] text-[#4a7a9b]'}`
+                          : `pointer-events-none absolute w-full text-center font-mono text-[9px] font-bold ${k.black ? 'top-[calc(62%+12px)] text-[#4a7a9b]' : 'top-[calc(62%+12px)] text-[#4a7a9b]'}`
                       }
                     >
                       {deg}
