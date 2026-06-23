@@ -166,13 +166,10 @@ export class ScaleMode {
     this.voiced = 0
     this.deps.onChipState(this.idx, 'now')
     this.deps.onTarget(midi)
-    if (this.deps.getGuideOn()) {
-      // ほぼ1拍ぶん鳴らす(短いと合成ピアノがピチカート化する)
-      this.deps.playTone(
-        midi,
-        Math.max(SCALE.GUIDE_MIN_SEC, (beat / 1000) * SCALE.GUIDE_BEAT_RATIO),
-      )
-    }
+    this.deps.playTone(
+      midi,
+      Math.max(SCALE.GUIDE_MIN_SEC, (beat / 1000) * SCALE.GUIDE_BEAT_RATIO),
+    )
     this.timer = setTimeout(() => this.next(), beat)
   }
 }
