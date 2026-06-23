@@ -876,7 +876,7 @@ export default function App() {
                 </label>
               </>
             )}
-            <p className="text-ink-dim text-xs">
+            <p className="text-ink-dim ml-auto text-right text-xs">
               マイクを開始して声を出すと、検出した音程がグラフに軌跡として表示されます。グラフ左の鍵盤をタップすると参照音が鳴ります。
             </p>
           </div>
