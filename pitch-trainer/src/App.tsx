@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { PIANO, PITCH, SCALE, SINGLE, SYNTH } from './config'
+import { LEAP, PIANO, PITCH, SCALE, SINGLE, SYNTH } from './config'
 import { gateFromSensitivity, rmsOf, sensitivityFromGate } from './audio/level'
 import { describeMicError, openMic, type MicErrorInfo, type MicInput } from './audio/mic'
 import { detectPitch } from './audio/pitch-detector'
@@ -23,17 +23,19 @@ import {
 import { SCALE_TYPES, type ScaleType } from './audio/notes'
 import { SingleMode } from './modes/single'
 import { ScaleMode, type PatternKey } from './modes/scale'
+import { LeapMode, type DirectionKey, type IntervalKey } from './modes/leap'
 import { JudgeBar, type JudgeBarHandle } from './components/JudgeBar'
 import { MicHelp } from './components/MicHelp'
 import { Piano } from './components/Piano'
 import { PitchGraph, type PitchGraphHandle } from './components/PitchGraph'
+import { LeapPane, type LeapChip, type PresetKey as LeapPresetKey } from './components/LeapPane'
 import { ScalePane, type Chip } from './components/ScalePane'
 import { SinglePane, type PresetKey } from './components/SinglePane'
 import { Button, Card, InfoTip } from './components/ui'
 import { SensitivityControl } from './components/SensitivityControl'
 import { VolumeControl } from './components/VolumeControl'
 
-type Mode = 'tuner' | 'keyboard' | 'single' | 'scale'
+type Mode = 'tuner' | 'keyboard' | 'single' | 'leap' | 'scale'
 type DetectRangeKey = keyof typeof PITCH.DETECT_RANGES
 
 // ---- localStorage 読み出しヘルパ(未保存・不正値はフォールバック)----
@@ -55,6 +57,7 @@ const TABS: ReadonlyArray<readonly [Mode, string]> = [
   ['tuner', 'チューナー'],
   ['keyboard', '鍵盤'],
   ['single', '単音発声'],
+  ['leap', '跳躍発声'],
   ['scale', '音階練習'],
 ]
 
@@ -151,6 +154,29 @@ export default function App() {
   const [scaleRunning, setScaleRunning] = useState(false)
   const [scaleInfo, setScaleInfo] = useState('')
   const [chips, setChips] = useState<Chip[]>([])
+  // 跳躍発声(設定は localStorage に保存)
+  const [leapKey, setLeapKey] = useState<number>(() => loadNum('leap-key', LEAP.DEFAULT_KEY, 0, 11))
+  const [leapInterval, setLeapInterval] = useState<IntervalKey>(() =>
+    loadEnum('leap-interval', ['3rd', '5th', 'random'] as const, 'random'),
+  )
+  const [leapDirection, setLeapDirection] = useState<DirectionKey>(() =>
+    loadEnum('leap-direction', ['up', 'down', 'random'] as const, 'random'),
+  )
+  const [leapBpm, setLeapBpm] = useState<number>(() =>
+    loadNum('leap-bpm', LEAP.BPM_DEFAULT, LEAP.BPM_MIN, LEAP.BPM_MAX),
+  )
+  const [leapPreset, setLeapPreset] = useState<LeapPresetKey>(() =>
+    loadEnum('leap-preset', ['male', 'female', 'custom'] as const, 'custom'),
+  )
+  const [leapLow, setLeapLow] = useState<number>(() =>
+    loadNum('leap-low', LEAP.DEFAULT_LOW, LEAP.RANGE_MIN, LEAP.RANGE_MAX),
+  )
+  const [leapHigh, setLeapHigh] = useState<number>(() =>
+    loadNum('leap-high', LEAP.DEFAULT_HIGH, LEAP.RANGE_MIN, LEAP.RANGE_MAX),
+  )
+  const [leapRunning, setLeapRunning] = useState(false)
+  const [leapInfo, setLeapInfo] = useState('')
+  const [leapChips, setLeapChips] = useState<LeapChip[]>([])
 
   // ---- 60Hz 系・メインループから参照するもの(ref。再レンダリングさせない)----
   const graphRef = useRef<PitchGraphHandle>(null)
@@ -235,10 +261,47 @@ export default function App() {
     localStorage.setItem('scale-turnaround', String(turnaround))
   }, [patternKey, scaleBase, bpm, guideOn, roundCount, turnaround])
 
-  // ScaleMode が常に最新の設定値を読めるようにする(プロトタイプが毎回 DOM を読む挙動の踏襲)
-  const latest = useRef({ timbre, patternKey, bpm, guideOn, roundCount, turnaround })
+  // 跳躍発声の設定を localStorage に保存
   useEffect(() => {
-    latest.current = { timbre, patternKey, bpm, guideOn, roundCount, turnaround }
+    localStorage.setItem('leap-key', String(leapKey))
+    localStorage.setItem('leap-interval', leapInterval)
+    localStorage.setItem('leap-direction', leapDirection)
+    localStorage.setItem('leap-bpm', String(leapBpm))
+    localStorage.setItem('leap-preset', leapPreset)
+    localStorage.setItem('leap-low', String(leapLow))
+    localStorage.setItem('leap-high', String(leapHigh))
+  }, [leapKey, leapInterval, leapDirection, leapBpm, leapPreset, leapLow, leapHigh])
+
+  // ScaleMode / LeapMode が常に最新の設定値を読めるようにする
+  const latest = useRef({
+    timbre,
+    patternKey,
+    bpm,
+    guideOn,
+    roundCount,
+    turnaround,
+    leapKey,
+    leapInterval,
+    leapDirection,
+    leapBpm,
+    leapLow,
+    leapHigh,
+  })
+  useEffect(() => {
+    latest.current = {
+      timbre,
+      patternKey,
+      bpm,
+      guideOn,
+      roundCount,
+      turnaround,
+      leapKey,
+      leapInterval,
+      leapDirection,
+      leapBpm,
+      leapLow,
+      leapHigh,
+    }
   })
 
   // 起動直後にサンプルピアノのロードを開始する。AudioContext はサスペンド状態でも
@@ -299,6 +362,28 @@ export default function App() {
     })
   }, [])
 
+  const leapRef = useRef<LeapMode | null>(null)
+  useEffect(() => {
+    leapRef.current ??= new LeapMode({
+      getBpm: () => latest.current.leapBpm,
+      getKey: () => latest.current.leapKey,
+      getInterval: () => latest.current.leapInterval,
+      getDirection: () => latest.current.leapDirection,
+      getLow: () => latest.current.leapLow,
+      getHigh: () => latest.current.leapHigh,
+      playTone: (m, d) => playTone(m, latest.current.timbre, d),
+      onChips: (labels) => setLeapChips(labels.map((label) => ({ label, state: '' }))),
+      onChipState: (idx, state) =>
+        setLeapChips((cs) => cs.map((c, i) => (i === idx ? { ...c, state } : c))),
+      onInfo: setLeapInfo,
+      onTarget: (m) => {
+        targetRef.current = m
+        setTarget(m)
+      },
+      onRunningChange: setLeapRunning,
+    })
+  }, [])
+
   // ---- メインループ(約60fps)----
   useEffect(() => {
     let raf = 0
@@ -323,6 +408,13 @@ export default function App() {
       const ss = singleRef.current.state
       if (modeRef.current === 'single' && ss.target != null && !ss.solved) {
         gTarget = ss.target
+      } else if (
+        modeRef.current === 'leap' &&
+        leapRef.current?.running &&
+        targetRef.current != null
+      ) {
+        gTarget = targetRef.current
+        gTol = LEAP.TOLERANCE_CENTS
       } else if (
         modeRef.current === 'scale' &&
         scaleRef.current?.running &&
@@ -374,6 +466,8 @@ export default function App() {
         }
       }
 
+      // 跳躍発声の判定
+      if (modeRef.current === 'leap') leapRef.current?.judge(frame.midi)
       // 音階練習の判定
       if (modeRef.current === 'scale') scaleRef.current?.judge(frame.midi)
     }
@@ -418,6 +512,7 @@ export default function App() {
     setMode(m)
     modeRef.current = m
     if (m !== 'keyboard') setKeyboardFull(false)
+    if (m !== 'leap') leapRef.current?.stop()
     if (m !== 'scale') scaleRef.current?.stop()
     if (m !== 'single') {
       singleRef.current.abandon()
@@ -528,6 +623,48 @@ export default function App() {
     scaleRef.current?.start(scaleBase)
   }
 
+  function handleLeapPreset(p: LeapPresetKey) {
+    setLeapPreset(p)
+    if (p !== 'custom') {
+      const [lo, hi] = LEAP.PRESETS[p]
+      setLeapLow(lo)
+      setLeapHigh(hi)
+    }
+  }
+  function handleLeapLow(v: number) {
+    setLeapLow(v)
+    if (leapPreset !== 'custom') setLeapPreset('custom')
+  }
+  function handleLeapHigh(v: number) {
+    setLeapHigh(v)
+    if (leapPreset !== 'custom') setLeapPreset('custom')
+  }
+
+  function handleLeapPlay() {
+    if (!micOn) {
+      alert('先にマイクを開始してください')
+      return
+    }
+    if (leapLow > leapHigh) {
+      alert('音域が不正です')
+      return
+    }
+    gtag('event', 'start_leap', {
+      key: leapKey,
+      interval: leapInterval,
+      direction: leapDirection,
+      bpm: leapBpm,
+      low: leapLow,
+      high: leapHigh,
+    })
+    sessionStartRef.current = performance.now()
+    leapRef.current?.play()
+  }
+
+  function handleLeapReplay() {
+    leapRef.current?.replay()
+  }
+
   return (
     <div className="mx-auto flex h-dvh max-w-[1080px] flex-col gap-2 overflow-y-auto p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:gap-3 md:p-4">
       {overlay && !sampledReady && (
@@ -610,10 +747,10 @@ export default function App() {
           onClose={() => setMicError(null)}
         />
       )}
-      <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-        <h1 className="text-sm font-semibold tracking-[0.08em] whitespace-nowrap sm:text-base">
+      <header className="flex flex-wrap items-center justify-end gap-x-1.5 gap-y-1 sm:gap-x-2">
+        <h1 className="mr-auto hidden text-sm font-semibold tracking-[0.08em] whitespace-nowrap sm:block sm:text-base">
           PITCH LAB
-          <span className="text-ink-dim ml-2 hidden text-xs font-normal sm:inline">ピッチラボ</span>
+          <span className="text-ink-dim ml-2 text-xs font-normal">ピッチラボ</span>
         </h1>
         <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <VolumeControl
@@ -645,7 +782,7 @@ export default function App() {
               <option value="female">女性</option>
               <option value="wide">全域</option>
             </select>
-            <InfoTip placement="bottom-center">
+            <InfoTip>
               左のセレクトは<strong>音域</strong>
               (検出する声の高さの範囲)です。大声で低音が高い音に化ける場合は、声に合った音域を選ぶと改善します。
               <br />
@@ -683,7 +820,7 @@ export default function App() {
         {TABS.map(([key, label]) => (
           <button
             key={key}
-            className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-sm ${
+            className={`flex-1 cursor-pointer rounded-md px-1 py-1.5 text-xs sm:px-2 sm:text-sm ${
               mode === key ? 'bg-panel2 text-amber font-semibold' : 'text-ink-dim'
             }`}
             onClick={() => switchMode(key)}
@@ -694,7 +831,7 @@ export default function App() {
       </div>
 
       {mode !== 'keyboard' && (
-        <div className="border-line bg-panel flex min-h-0 flex-1 flex-col rounded-xl border p-2">
+        <div className="border-line bg-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border p-2">
           {/* チューナーを隠すオプションで覆うのはこの音高メーター部分のみ。下の JudgeBar(メッセージ・進捗バー)は隠さない */}
           <div className="relative flex min-h-0 w-full flex-1 flex-col">
             <PitchGraph
@@ -898,6 +1035,29 @@ export default function App() {
           onReplay={handleReplay}
           onHideTunerChange={handleHideTuner}
           onAutoQuizChange={handleAutoQuiz}
+        />
+      )}
+      {mode === 'leap' && (
+        <LeapPane
+          keyRoot={leapKey}
+          interval={leapInterval}
+          direction={leapDirection}
+          bpm={leapBpm}
+          preset={leapPreset}
+          low={leapLow}
+          high={leapHigh}
+          running={leapRunning}
+          info={leapInfo}
+          chips={leapChips}
+          onKeyChange={setLeapKey}
+          onIntervalChange={setLeapInterval}
+          onDirectionChange={setLeapDirection}
+          onBpmChange={setLeapBpm}
+          onPresetChange={handleLeapPreset}
+          onLowChange={handleLeapLow}
+          onHighChange={handleLeapHigh}
+          onPlay={handleLeapPlay}
+          onReplay={handleLeapReplay}
         />
       )}
       {mode === 'scale' && (

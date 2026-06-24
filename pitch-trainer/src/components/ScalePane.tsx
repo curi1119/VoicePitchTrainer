@@ -43,7 +43,7 @@ interface ScalePaneProps {
 
 export function ScalePane(p: ScalePaneProps) {
   return (
-    <Card className="p-2.5">
+    <Card className="overflow-hidden p-2.5">
       <div className="flex flex-wrap items-center gap-2">
         {/* スマホ1行目: スタート・停止・スタート音・ガイド音 / PC: 先頭 */}
         <Button primary onClick={p.onStart} disabled={p.running}>

@@ -198,6 +198,28 @@ export const SCALE = {
   TURNAROUND_DEFAULT: false,
 } as const
 
+/** 跳躍発声 */
+export const LEAP = {
+  TOLERANCE_CENTS: 60,
+  MIN_HITS: 6,
+  HIT_RATIO: 0.35,
+  GUIDE_MIN_SEC: 0.5,
+  GUIDE_BEAT_RATIO: 0.95,
+  BPM_MIN: 50,
+  BPM_MAX: 160,
+  BPM_DEFAULT: 80,
+  BPM_STEP: 5,
+  RANGE_MIN: 36,
+  RANGE_MAX: 84,
+  DEFAULT_LOW: 48,
+  DEFAULT_HIGH: 72,
+  PRESETS: {
+    male: [43, 67],
+    female: [55, 79],
+  } as Record<'male' | 'female', readonly [number, number]>,
+  DEFAULT_KEY: 0,
+} as const
+
 /** ピッチグラフ(時間×音高) */
 export const GRAPH = {
   /** 横軸の表示窓(秒)。右端が現在 */

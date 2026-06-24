@@ -46,6 +46,21 @@ const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'] as const
 export const isInKey = (midi: number, keyRoot: number, scale: ScaleType = 'major') =>
   SCALE_SETS[scale].has(((midi % 12) - keyRoot + 12) % 12)
 
+/**
+ * メジャースケール上で steps 度数ぶん移動した MIDI を返す。
+ * steps>0 で上行、steps<0 で下行。midi がスケール音でなければ null。
+ */
+export function diatonicStep(midi: number, keyRoot: number, steps: number): number | null {
+  const intervals = SCALE_INTERVALS.major
+  const rel = ((midi % 12) - keyRoot + 12) % 12
+  const idx = intervals.indexOf(rel)
+  if (idx < 0) return null
+  const targetIdx = idx + steps
+  const octaveShift = Math.floor(targetIdx / 7)
+  const degInOctave = ((targetIdx % 7) + 7) % 7
+  return midi - rel + intervals[degInOctave] + octaveShift * 12
+}
+
 /** スケール度数のローマ数字を返す。スケール外なら null */
 export function degreeLabel(
   midi: number,

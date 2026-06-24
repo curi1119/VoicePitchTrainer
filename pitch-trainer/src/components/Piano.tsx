@@ -89,14 +89,24 @@ export function Piano({
     else el.scrollLeft = Math.max(0, c4 - el.clientWidth / 2)
   }, [vertical, thickness, totalPx])
 
-  // 目標音が変わったら見える位置へスクロール
+  // 目標音が変わったら、画面外にある場合のみスクロール
   useEffect(() => {
     if (target == null) return
-    keyEls.current.get(target)?.scrollIntoView({
-      inline: vertical ? 'nearest' : 'center',
-      block: vertical ? 'center' : 'nearest',
-      behavior: 'smooth',
-    })
+    const el = keyEls.current.get(target)
+    const container = scrollRef.current
+    if (!el || !container) return
+    const kr = el.getBoundingClientRect()
+    const cr = container.getBoundingClientRect()
+    const visible = vertical
+      ? kr.top >= cr.top && kr.bottom <= cr.bottom
+      : kr.left >= cr.left && kr.right <= cr.right
+    if (!visible) {
+      el.scrollIntoView({
+        inline: vertical ? 'nearest' : 'center',
+        block: vertical ? 'center' : 'nearest',
+        behavior: 'smooth',
+      })
+    }
   }, [target, vertical])
 
   // アンマウント時に押下表示のタイマーを掃除

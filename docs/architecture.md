@@ -60,6 +60,7 @@ pitch-trainer/
 │  │  └─ notes.ts            # MIDI ↔ 周波数 ↔ 音名 の変換ユーティリティ
 │  ├─ modes/        # 判定ロジック。純粋 TS(テスト対象)
 │  │  ├─ single.ts           # 単音発声: キープ/不正解/リトライの状態機械
+│  │  ├─ leap.ts             # 跳躍発声: ダイアトニック3度/5度の3音パターン生成と判定
 │  │  └─ scale.ts            # 音階練習: ラウンド進行と音ごとの判定
 │  ├─ components/   # PitchGraph(時間×音高グラフ)/ Piano / JudgeBar / 各モードの UI
 │  │                 #   pitch-graph-math.ts はグラフの座標・レンジ計算(純関数・テスト対象)
@@ -115,7 +116,8 @@ pitch-trainer/
 | トライアド | 2拍再生 + 半拍空け | ラウンド開始前に調を提示(ガイドON時のみ) |
 | ラウンド間待ち | 1拍 | フレーズ終了→次ラウンド開始までの間(`SCALE.ROUND_GAP_BEATS`) |
 | 音階ラウンド数 / 折り返し | 既定10(1〜24)/ 既定OFF | ラウンド数=上昇する周回数。`折り返し`ON で上限(`startBase`+ラウンド数-1、ただし最高音 MIDI 96 を超えない)まで上げたら半音ずつ下げて開始音へ戻り、また上げる…を停止まで無限ループ(`SCALE.ROUND_COUNT_*` / `TURNAROUND_DEFAULT`、localStorage `scale-round-count` / `scale-turnaround`)|
-| 出題プリセット | 男性 G2〜G4 / 女性 G3〜G5 | MIDI 43-67 / 55-79(カスタム初期値 C3〜C5) |
+| 出題プリセット | 男性 G2〜G4 / 女性 G3〜G5 | MIDI 43-67 / 55-79(カスタム初期値 C3〜C5)。単音発声・跳躍発声で共通 |
+| 跳躍発声判定 | ±60セント, `max(6, voiced×0.35)` | 音階練習と同じ合格条件。タイマー駆動で3音(基音→跳躍音→基音)を1拍ずつ判定 |
 | `SAMPLED_VOLUME` | 127 | サンプルピアノの音量 0-127(初期値100ではスマホで音量不足 → 最大化) |
 | `SAMPLED_VELOCITY` | 108 | サンプルピアノのベロシティ 0-127(音色の明るさにも影響。90→108) |
 | `SAMPLED_BOOST` | 1.6 | 追加ブースト倍率。コンプレッサー経由で音割れを防止(2026-06-13 スマホ音量対策) |
@@ -160,5 +162,5 @@ pitch-trainer/
 - ピアノ音源はサンプル化済み(2026-06-12、smplr + SplendidGrandPiano)。サンプルは公式 CDN(smpldsnds)から取得し、Cache API で永続キャッシュするため一度ロードすればオフラインでも鳴る。**Capacitor で同梱する場合は smplr の `baseUrl` オプションで切り替える**。音質に不満が出たら Salamander Grand Piano(CC BY 3.0・要クレジット表記)への乗り換えが次候補。アセットはライセンス的に問題ないもののみ利用可
 - 音階練習でガイド音 ON + スピーカー使用時は自分のマイクがアプリ音を拾いうる(ヘッドホン推奨で運用)
 - AudioWorklet 化(検出処理のオーディオスレッド移行)は見送り中。現状メインスレッドで約 2.3ms/フレームと実用十分
-- 設定の localStorage 永続化(2026-06-16 拡充): 音量(`master-volume`)・音域(`detect-range`)・感度(`detect-sensitivity`)に加え、単音発声(`single-preset` / `single-low` / `single-high` / `single-hide-tuner` / `single-auto-quiz`)と音階練習(`scale-pattern` / `scale-base` / `scale-bpm` / `scale-guide` / `scale-round-count` / `scale-turnaround`)を保存。**未保存: 音色・スコア**
+- 設定の localStorage 永続化(2026-06-16 拡充): 音量(`master-volume`)・音域(`detect-range`)・感度(`detect-sensitivity`)に加え、単音発声(`single-preset` / `single-low` / `single-high` / `single-hide-tuner` / `single-auto-quiz`)、跳躍発声(`leap-key` / `leap-interval` / `leap-direction` / `leap-bpm` / `leap-preset` / `leap-low` / `leap-high`)、音階練習(`scale-pattern` / `scale-base` / `scale-bpm` / `scale-guide` / `scale-round-count` / `scale-turnaround`)を保存。**未保存: 音色・スコア**
 - 未着手の将来項目: 音名表記の切替(ドレミ等)、練習/テストモード切替(不正解即確定 1.2 秒は初心者に厳しい可能性)、Capacitor によるモバイルアプリ化

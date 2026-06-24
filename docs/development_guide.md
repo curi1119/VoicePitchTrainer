@@ -39,8 +39,8 @@ bun run dev
 
 getUserMedia(マイク)は **HTTPS 必須**のため、`http://192.168.x.x:5173` ではスマホのマイクが動きません。方法は2つ:
 
-1. **GitHub Pages で確認(推奨)**: main へ push → 自動デプロイ(1〜2分)→ スマホで <https://curi1119.github.io/VoicePitchTrainer/> を開く
-2. **LAN + HTTPS**: `bun run dev:https`(`@vitejs/plugin-basic-ssl` の自己署名証明書)で起動し、スマホから `https://<開発機のIP>:5173` へ。証明書警告は「続行」する。WSL2 の場合は Windows 側へのポートプロキシ設定(`netsh interface portproxy`)が必要になることがある
+1. **LAN + HTTPS(推奨)**: `bun run dev:https`(`@vitejs/plugin-basic-ssl` の自己署名証明書、`--host` 付き)で起動し、スマホから `https://<開発機のIP>:5173` へアクセス。証明書警告は「詳細」→「アクセスする」で進む。WSL2 環境でも同一 LAN のスマホから直接接続できることを確認済み(ポートプロキシ不要の場合あり)
+2. **GitHub Pages で確認**: main へ push → 自動デプロイ(1〜2分)→ スマホで <https://curi1119.github.io/VoicePitchTrainer/> を開く
 
 ## テスト・lint・ビルド
 
