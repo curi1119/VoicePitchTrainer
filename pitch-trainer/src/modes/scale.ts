@@ -166,10 +166,7 @@ export class ScaleMode {
     this.voiced = 0
     this.deps.onChipState(this.idx, 'now')
     this.deps.onTarget(midi)
-    this.deps.playTone(
-      midi,
-      Math.max(SCALE.GUIDE_MIN_SEC, (beat / 1000) * SCALE.GUIDE_BEAT_RATIO),
-    )
+    this.deps.playTone(midi, Math.max(SCALE.GUIDE_MIN_SEC, (beat / 1000) * SCALE.GUIDE_BEAT_RATIO))
     this.timer = setTimeout(() => this.next(), beat)
   }
 }

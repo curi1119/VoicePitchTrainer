@@ -61,7 +61,7 @@ export function LeapPane(p: LeapPaneProps) {
         >
           🔁 もう一度
         </Button>
-        <span className="md:order-last md:ml-auto">
+        <span className="ml-auto md:order-last">
           <InfoTip>
             選択したキーの<strong>メジャースケール</strong>
             上でダイアトニック3度/5度の跳躍練習を行います。ガイド音を聞いて同じ高さの声を出してください。
